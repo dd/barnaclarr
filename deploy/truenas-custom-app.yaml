@@ -1,0 +1,37 @@
+# TrueNAS SCALE: Apps > Discover Apps > menu > Install via YAML.
+# Install via YAML has no .env file: replace every /mnt/tank/... path below with
+# your own datasets before pasting. Build the image first (docs/installation.md).
+#
+#   /mnt/tank/media    dataset holding BOTH downloads and the library (one mount)
+#   .../config         config.toml, sonarr-api-key, webhook-token (read-only)
+#   .../state          SQLite queue/journal (read-write, keep across upgrades)
+services:
+  anime-sidecar:
+    image: anime-sidecar-manager:0.1.0
+    pull_policy: never
+    user: "568:568"
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 512m
+    cpus: 1
+    environment:
+      TZ: UTC
+    ports:
+      # Host port for the Sonarr webhook; the container port must match `port` in config.toml.
+      - "8787:8787"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /mnt/tank/media:/mnt/media
+      - /mnt/tank/apps/anime-sidecar/config:/config:ro
+      - /mnt/tank/apps/anime-sidecar/state:/state
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

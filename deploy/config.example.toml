@@ -1,0 +1,42 @@
+# Example configuration. Copy to <config dir>/config.toml and adjust.
+# Paths are as seen INSIDE the container: the media dataset is mounted at /mnt/media.
+# No credentials belong in this file; they are read from the *_file paths below.
+
+# Download client category folders (qBittorrent save paths), not the whole dataset.
+download_roots = ["/mnt/media/downloads/anime"]
+# Sonarr root folders this app may write sidecars into.
+library_roots = ["/mnt/media/anime"]
+# Shared font library; a plain directory inside the same dataset, not a separate dataset.
+font_root = "/mnt/media/.anime-sidecar-fonts"
+database = "/state/sidecar.sqlite3"
+# Sonarr address reachable from this container: the NAS LAN IP or host.docker.internal,
+# plus the port Sonarr listens on (8989 by default; TrueNAS apps often use another one).
+sonarr_url = "http://host.docker.internal:8989"
+api_version = "v3"
+api_key_file = "/config/sonarr-api-key"
+webhook_token_file = "/config/webhook-token"
+dry_run = true
+# Container port of the webhook; publish it on the host in compose/YAML.
+port = 8787
+max_files = 20000
+# Language for tracks whose folders and names carry no language label.
+default_language = "ru"
+
+[[rules]]
+pattern = '(?i)(?:RUS Subs|RUS Sound|RUS Audio|Russian|Русские)'
+language = "ru"
+
+[[rules]]
+pattern = '(?i)AniDub'
+language = "ru"
+group = "AniDub"
+
+[[rules]]
+pattern = '(?i)AniLibria'
+language = "ru"
+group = "AniLibria"
+
+# Exact category-relative sidecar paths -> Sonarr episode IDs, not episode numbers.
+# Never assume release "13 OVA" equals S00E13. Verify in Sonarr first.
+[mappings]
+# "Release/RUS Subs/Show - 13 OVA.ass" = [1234]

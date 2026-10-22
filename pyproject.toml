@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anime-sidecar-manager"
+version = "0.1.0"
+description = "Conservative hardlink-only Sonarr sidecar importer"
+requires-python = ">=3.12"
+dependencies = ["fonttools==4.60.1"]
+
+[project.optional-dependencies]
+test = ["pytest==8.4.2", "ruff==0.14.1"]
+
+[project.scripts]
+anime-sidecar = "sidecar.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["sidecar*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
