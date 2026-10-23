@@ -3,6 +3,7 @@
 import argparse
 from contextlib import ExitStack
 import fcntl
+from importlib.metadata import PackageNotFoundError, version
 import json
 import logging
 from pathlib import Path
@@ -14,9 +15,18 @@ from .sonarr import Sonarr
 from .state import State
 
 
+def installed_version() -> str:
+    """Version from pyproject.toml, as installed into the image by pip."""
+    try:
+        return version("anime-sidecar-manager")
+    except PackageNotFoundError:
+        return "unknown (not installed)"
+
+
 def main():
     parser = argparse.ArgumentParser(description="Anime Sidecar Manager")
     parser.add_argument("--config", type=Path, default=Path("/config/config.toml"))
+    parser.add_argument("--version", action="version", version=installed_version())
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("serve")
     event = sub.add_parser("event")

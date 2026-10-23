@@ -78,10 +78,15 @@ python3 -m venv .venv
 .venv/bin/ruff check .
 .venv/bin/ruff format --check .
 git diff --check
-docker build -t anime-sidecar-manager:0.1.0 .
+docker build -t ghcr.io/dd/sidecarr-extras-import:dev .
 ```
 
 Тесты не обращаются к сервисам: Sonarr заменён in-memory объектом, HTTP проверяется на буферах без сокетов, шрифты создаются тестовым FontBuilder, файловые операции выполняются во временных каталогах.
+
+
+## Releases
+
+Версия задаётся только в `pyproject.toml`. Релиз: поднять версию, закоммитить и поставить тег `vX.Y.Z`; GitHub Actions проверит тесты и совпадение тега с версией и опубликует образ `ghcr.io/dd/sidecarr-extras-import:X.Y.Z`.
 
 
 ## Sources

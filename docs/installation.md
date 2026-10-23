@@ -28,25 +28,29 @@
 
 ## Build and Custom App
 
-Образ пока не публикуется в реестр, его нужно собрать на NAS. Скачайте исходники в выбранный каталог, войдите в него и выполните:
+Образ собирается GitHub Actions ([publish.yml](../.github/workflows/publish.yml)) и публикуется в GitHub Container Registry как `ghcr.io/dd/sidecarr-extras-import`:
 
-```sh
-sudo docker build -t anime-sidecar-manager:0.1.0 .
-```
+| Тег | Когда обновляется |
+| --- | --- |
+| `0.1.0`, `0.1`, `latest` | git-тег `v0.1.0`, версия должна совпадать с `pyproject.toml` |
+| `dev`, `main` | каждый push в соответствующую ветку, для тестов |
+| `sha-<commit>` | каждая сборка |
 
-Этот тег локальный. При обновлении используйте новый тег, а после проверки меняйте image в YAML.
+Для постоянной установки указывайте конкретную версию, а не `latest` или `dev`. Если пакет в GHCR приватный, сделайте его публичным (GitHub > Packages > package settings) или добавьте учётные данные реестра в TrueNAS (Apps > Configuration > Manage Container Images / Docker Registries). Версию внутри контейнера показывает `anime-sidecar --version`.
 
-**Install via YAML.** Apps > Discover Apps > меню > Install via YAML. Имя приложения: `anime-sidecar`. Скопируйте `deploy/truenas-custom-app.yaml`, замените все пути `/mnt/tank/...` своими и при необходимости порт и `TZ`, затем вставьте целиком. Там указан `pull_policy: never` для локально собранного образа. Install via YAML не читает `.env`, поэтому значения задаются прямо в YAML.
+Собрать образ локально без реестра тоже можно: `docker build -t ghcr.io/dd/sidecarr-extras-import:dev .`
+
+**Install via YAML.** Apps > Discover Apps > меню > Install via YAML. Имя приложения: `anime-sidecar`. Скопируйте `deploy/truenas-custom-app.yaml`, замените все пути `/mnt/tank/...` своими и при необходимости тег образа, порт и `TZ`, затем вставьте целиком. Install via YAML не читает `.env`, поэтому значения задаются прямо в YAML. Обновление версии — смена тега образа в настройках приложения.
 
 **Docker Compose вне TrueNAS:**
 
 ```sh
 cp deploy/.env.example deploy/.env
 docker compose -f deploy/compose.yaml config --quiet
-docker compose -f deploy/compose.yaml up -d --build
+docker compose -f deploy/compose.yaml up -d
 ```
 
-Не запускайте одновременно Compose и TrueNAS Custom App для одной базы.
+`up -d` скачивает образ с тегом `IMAGE_TAG`; `up -d --build` собирает его из checkout. Не запускайте одновременно Compose и TrueNAS Custom App для одной базы.
 
 Порт webhook (`WEBHOOK_PORT`, по умолчанию 8787) должен быть свободен. Это внутренний API без пользовательского UI; не публикуйте его через внешний reverse proxy. Webhook использует bearer token по HTTP внутри доверенной сети. Если трафик проходит через недоверенную сеть, требуется HTTPS на reverse proxy.
 
