@@ -25,7 +25,11 @@ def installed_version() -> str:
 
 def main():
     parser = argparse.ArgumentParser(description="Anime Sidecar Manager")
-    parser.add_argument("--config", type=Path, default=Path("/config/config.toml"))
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="Optional TOML file; default SIDECAR_CONFIG or /config/config.toml if present",
+    )
     parser.add_argument("--version", action="version", version=installed_version())
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("serve")

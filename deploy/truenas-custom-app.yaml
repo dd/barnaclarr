@@ -1,10 +1,11 @@
 # TrueNAS SCALE: Apps > Discover Apps > menu > Install via YAML.
-# Install via YAML has no .env file: replace every /mnt/tank/... path below with
-# your own datasets before pasting. Pin the image to a released version tag.
+# Install via YAML has no .env file: replace every /mnt/tank/... path, the Sonarr
+# address and both secrets below before pasting. Settings are read at start; edit
+# the app and redeploy to change them.
 #
 #   /mnt/tank/media    dataset holding BOTH downloads and the library (one mount)
-#   .../config         config.toml, sonarr-api-key, webhook-token (read-only)
 #   .../state          SQLite queue/journal (read-write, keep across upgrades)
+#   .../config         optional: config.toml with rules and mappings only
 services:
   anime-sidecar:
     image: ghcr.io/dd/sidecarr-extras-import:0.1.0
@@ -18,15 +19,27 @@ services:
     cpus: 1
     environment:
       TZ: UTC
+      # Paths as seen inside the container (the media dataset is /mnt/media).
+      SIDECAR_DOWNLOAD_ROOTS: /mnt/media/downloads/anime
+      SIDECAR_LIBRARY_ROOTS: /mnt/media/anime
+      SIDECAR_FONT_ROOT: /mnt/media/.anime-sidecar-fonts
+      # Sonarr as reachable from this container: NAS LAN IP or host.docker.internal.
+      SIDECAR_SONARR_URL: http://host.docker.internal:8989
+      SIDECAR_SONARR_API_KEY: <Sonarr Settings > General > API Key>
+      # Random string of 32+ characters, e.g. `openssl rand -hex 32`.
+      SIDECAR_WEBHOOK_TOKEN: <webhook token>
+      SIDECAR_DEFAULT_LANGUAGE: und
+      # Keep true until a dry-run report looks right.
+      SIDECAR_DRY_RUN: "true"
     ports:
-      # Host port for the Sonarr webhook; the container port must match `port` in config.toml.
       - "8787:8787"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - /mnt/tank/media:/mnt/media
-      - /mnt/tank/apps/anime-sidecar/config:/config:ro
       - /mnt/tank/apps/anime-sidecar/state:/state
+      # Optional, for rules and mappings: a directory with config.toml.
+      # - /mnt/tank/apps/anime-sidecar/config:/config:ro
     tmpfs:
       - /tmp:size=16m,mode=1777
     logging:

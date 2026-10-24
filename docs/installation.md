@@ -1,6 +1,6 @@
 # TrueNAS installation
 
-Все пути, адреса и порты ниже — примеры. Свои значения задаются в `deploy/.env` (Compose), в путях `deploy/truenas-custom-app.yaml` (Install via YAML) и в `config.toml`. Требования к datasets описаны в [storage.md](storage.md).
+Все пути, адреса и порты ниже — примеры. Свои значения задаются переменными окружения `SIDECAR_*`: в `deploy/.env` (Compose) или в разделе `environment` файла `deploy/truenas-custom-app.yaml` (Install via YAML). Необязательный `config.toml` нужен только для `rules` и `mappings`. Требования к datasets описаны в [storage.md](storage.md).
 
 
 ## Storage preparation
@@ -10,20 +10,37 @@
 | Host path (пример) | Container path | Access |
 | --- | --- | --- |
 | `MEDIA_PATH`, например `/mnt/tank/media` | `/mnt/media` | RW, один общий bind mount |
-| `CONFIG_PATH`, например `/mnt/tank/apps/anime-sidecar/config` | `/config` | RO |
 | `STATE_PATH`, например `/mnt/tank/apps/anime-sidecar/state` | `/state` | RW |
+| `CONFIG_PATH` (необязательно), например `/mnt/tank/apps/anime-sidecar/config` | `/config` | RO |
 
-`MEDIA_PATH` — dataset, в котором лежат и загрузки, и медиатека. Конфигурацию не помещать внутрь управляемых `ix-apps` datasets других приложений. Отдельный dataset для config/state допустим. `font_root` (по умолчанию `/mnt/media/.anime-sidecar-fonts`) должен оставаться **обычной директорией внутри `MEDIA_PATH`**, не отдельным dataset.
+`MEDIA_PATH` — dataset, в котором лежат и загрузки, и медиатека. Конфигурацию не помещать внутрь управляемых `ix-apps` datasets других приложений. Отдельный dataset для state и config допустим. `font_root` (по умолчанию `/mnt/media/.anime-sidecar-fonts`) должен оставаться **обычной директорией внутри `MEDIA_PATH`**, не отдельным dataset.
 
-Через TrueNAS создайте каталоги config/state с правами чтения config и записи state для UID:GID 568:568. Для секретов используйте 0600 и владельца 568; для директорий 0700 или более узкий подходящий ACL. Не менять рекурсивно права существующей медиатеки.
+Через TrueNAS создайте каталог state (и config, если он нужен) с правом записи для UID:GID 568:568; для директорий 0700 или более узкий подходящий ACL. Не менять рекурсивно права существующей медиатеки.
 
-В config разместите:
 
-- `config.toml` из [`deploy/config.example.toml`](../deploy/config.example.toml), с `dry_run = true`. Обязательно задайте `sonarr_url`, `download_roots`, `library_roots`.
-- `sonarr-api-key`: ключ из Sonarr Settings > General > Security.
-- `webhook-token`: случайная строка, например `openssl rand -hex 32`.
+## Configuration
 
-Не добавлять эти файлы в Git. Не вставлять секреты в аргументы команд, URL или Compose environment. Конфиг прочитывается при старте; после его изменения перезапустите только anime-sidecar.
+Настройки задаются переменными окружения; переменная всегда важнее того же ключа в `config.toml`. Списки — через запятую или JSON-массивом, если в пути есть запятая. Пути указываются так, как их видит контейнер (`/mnt/media/...`).
+
+| Переменная | Обязательна | Значение |
+| --- | --- | --- |
+| `SIDECAR_DOWNLOAD_ROOTS` | да | папки категорий загрузок, например `/mnt/media/downloads/anime` |
+| `SIDECAR_LIBRARY_ROOTS` | да | корневые папки Sonarr, куда можно класть дорожки |
+| `SIDECAR_FONT_ROOT` | да | общая библиотека шрифтов внутри того же dataset |
+| `SIDECAR_SONARR_URL` | да | адрес Sonarr из контейнера: LAN IP NAS или `host.docker.internal`, с портом |
+| `SIDECAR_SONARR_API_KEY` или `SIDECAR_SONARR_API_KEY_FILE` | да | ключ из Sonarr Settings > General, значением или путём к файлу |
+| `SIDECAR_WEBHOOK_TOKEN` или `SIDECAR_WEBHOOK_TOKEN_FILE` | для сервера | случайная строка от 32 символов, например `openssl rand -hex 32` |
+| `SIDECAR_DRY_RUN` | нет, `true` | `false` включает запись в медиатеку |
+| `SIDECAR_DEFAULT_LANGUAGE` | нет, `und` | язык дорожек без языковой метки, например `en` или `ru` |
+| `SIDECAR_DATABASE` | нет | по умолчанию `/state/sidecar.sqlite3` |
+| `SIDECAR_API_VERSION`, `SIDECAR_PORT`, `SIDECAR_MAX_FILES` | нет | `v3`, `8787`, `20000` |
+| `SIDECAR_CONFIG` | нет | путь к `config.toml`, по умолчанию `/config/config.toml`, если файл есть |
+
+`config.toml` ([пример](../deploy/config.example.toml)) кладётся в каталог, подключённый как `/config`, и содержит `rules` и `mappings`. В нём можно задать и все остальные настройки — это удобно для обычного Docker без переменных.
+
+Секреты в `environment` видны в настройках приложения TrueNAS и в `docker inspect` — так же, как у других приложений каталога. Если это нежелательно, используйте варианты `_FILE` с файлом 0600, владелец 568, и не добавляйте эти файлы в Git.
+
+Настройки читаются при старте: после изменения переразверните приложение (TrueNAS: Edit > Save) или перезапустите контейнер.
 
 
 ## Build and Custom App
@@ -40,7 +57,7 @@
 
 Собрать образ локально без реестра тоже можно: `docker build -t ghcr.io/dd/sidecarr-extras-import:dev .`
 
-**Install via YAML.** Apps > Discover Apps > меню > Install via YAML. Имя приложения: `anime-sidecar`. Скопируйте `deploy/truenas-custom-app.yaml`, замените все пути `/mnt/tank/...` своими и при необходимости тег образа, порт и `TZ`, затем вставьте целиком. Install via YAML не читает `.env`, поэтому значения задаются прямо в YAML. Обновление версии — смена тега образа в настройках приложения.
+**Install via YAML.** Apps > Discover Apps > меню > Install via YAML. Имя приложения: `anime-sidecar`. Скопируйте `deploy/truenas-custom-app.yaml`, замените все пути `/mnt/tank/...`, адрес Sonarr и оба секрета своими, при необходимости тег образа, порт и `TZ`, затем вставьте целиком. Install via YAML не читает `.env`, поэтому значения задаются прямо в YAML. Обновление версии — смена тега образа в настройках приложения.
 
 **Docker Compose вне TrueNAS:**
 
@@ -62,9 +79,9 @@ docker compose -f deploy/compose.yaml up -d
 1. Sonarr > Settings > Connect > Webhook.
 2. URL: `http://<адрес NAS>:<WEBHOOK_PORT>/webhook/sonarr`. Адрес должен быть доступен из контейнера Sonarr: LAN IP NAS или адрес шлюза Docker-сети, через который Sonarr уже обращается к другим приложениям. Проверьте кнопкой Test.
 3. Method: POST.
-4. Advanced Headers: ключ `Authorization`, значение `Bearer <содержимое webhook-token>`.
+4. Advanced Headers: ключ `Authorization`, значение `Bearer <SIDECAR_WEBHOOK_TOKEN>`. Поля Username/Password оставьте пустыми.
 5. Включить события On Import / On Upgrade / On Rename. Основной вариант — уведомление для каждого импортированного файла с `episodeFile.sourcePath`. Поддерживается также Import Complete с `episodeFiles` и общим `sourcePath`: исходные файлы тогда берутся из истории импорта Sonarr.
-6. Ограничить connection тегом нужных аниме-сериалов. Приложение пишет только внутри `library_roots`.
+6. Для первой проверки ограничить connection тегом одного сериала. Приложение пишет только внутри `library_roots`.
 7. Нажать Test. HTTP 200 подтверждает доступность и token, но не проверяет сопоставление медиа и Sonarr API. HTTP 202 на рабочем событии означает постановку в очередь, а не успешное завершение импорта.
 
 **Перед включением записи** проверьте Sonarr Settings > Media Management > Import Extra Files: см. [storage.md](storage.md#sonarr-settings-that-matter).
@@ -72,7 +89,7 @@ docker compose -f deploy/compose.yaml up -d
 
 ## Dry run and enabling writes
 
-Сначала оставить `dry_run = true`. Для ручной проверки подготовьте JSON события с фактическими Sonarr series ID, episodeFile ID и оригинальным sourcePath. Номера берутся из Sonarr API, не из имени видео:
+Сначала оставить `SIDECAR_DRY_RUN=true`. Для ручной проверки подготовьте JSON события с фактическими Sonarr series ID, episodeFile ID и оригинальным sourcePath. Номера берутся из Sonarr API, не из имени видео:
 
 ```json
 {
@@ -85,15 +102,15 @@ docker compose -f deploy/compose.yaml up -d
 }
 ```
 
-`11`, `12345` и путь — placeholders. Сохраните файл как `<CONFIG_PATH>/event.json`. Чтобы выполнить CLI, временно остановите только anime-sidecar: CLI event и server используют один lock. Из checkout с Compose-файлом:
+`11`, `12345` и путь — placeholders. Сохраните файл как `<CONFIG_PATH>/event.json` (каталог config нужно подключить). Чтобы выполнить CLI, временно остановите только anime-sidecar: CLI event и server используют один lock. Из checkout с Compose-файлом:
 
 ```sh
 sudo docker compose -f deploy/compose.yaml run --rm --no-deps anime-sidecar event /config/event.json
 ```
 
-CLI `event` всегда dry-run, если не указан `--apply`; `--apply` также не отменяет `dry_run = true` в TOML. В отчёте проверьте sources/destinations, язык/группу, пропуски OVA и конфликты шрифтов. Dry-run не создаёт директории медиатеки, но может создать служебную SQLite и lock.
+CLI `event` всегда dry-run, если не указан `--apply`; `--apply` также не отменяет `SIDECAR_DRY_RUN=true`. В отчёте проверьте sources/destinations, язык/группу, пропуски OVA и конфликты шрифтов. Dry-run не создаёт директории медиатеки, но может создать служебную SQLite и lock.
 
-После проверки конфликтов изменить `dry_run = false`, перезапустить anime-sidecar и повторно подать событие либо запустить `event /config/event.json --apply`. События, уже завершённые в dry-run, **не выполняются повторно автоматически**. Это предотвращает неожиданный массовый импорт при смене режима.
+После проверки конфликтов установить `SIDECAR_DRY_RUN=false`, переразвернуть anime-sidecar и повторно подать событие либо запустить `event /config/event.json --apply`. События, уже завершённые в dry-run, **не выполняются повторно автоматически**. Это предотвращает неожиданный массовый импорт при смене режима.
 
 Проверить `stat` у созданной ссылки и исходника: одинаковые device/inode, link count >= 2. Jellyfin может потребовать Scan Media Library для обнаружения новых внешних дорожек.
 

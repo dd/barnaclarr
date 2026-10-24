@@ -15,7 +15,7 @@ LOG = logging.getLogger(__name__)
 
 
 def handler_class(config):
-    token = config.webhook_token_file.read_text().strip()
+    token = config.token()
     if len(token) < 32:
         raise ValueError("Webhook token must contain at least 32 characters")
 

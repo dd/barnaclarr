@@ -20,6 +20,6 @@ class Sonarr:
         url = f"{self.config.sonarr_url.rstrip('/')}/api/{self.config.api_version}/{route}"
         if params:
             url += "?" + urlencode(params)
-        request = Request(url, headers={"X-Api-Key": self.config.api_key_file.read_text().strip()})
+        request = Request(url, headers={"X-Api-Key": self.config.api_key()})
         with build_opener(NoRedirect).open(request, timeout=30) as response:
             return json.load(response)

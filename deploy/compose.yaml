@@ -15,6 +15,15 @@ services:
     cpus: 1
     environment:
       TZ: ${TZ:-UTC}
+      # Empty values are ignored, so config.toml can still provide them.
+      SIDECAR_DOWNLOAD_ROOTS: ${SIDECAR_DOWNLOAD_ROOTS:-}
+      SIDECAR_LIBRARY_ROOTS: ${SIDECAR_LIBRARY_ROOTS:-}
+      SIDECAR_FONT_ROOT: ${SIDECAR_FONT_ROOT:-}
+      SIDECAR_SONARR_URL: ${SIDECAR_SONARR_URL:-}
+      SIDECAR_SONARR_API_KEY: ${SIDECAR_SONARR_API_KEY:-}
+      SIDECAR_WEBHOOK_TOKEN: ${SIDECAR_WEBHOOK_TOKEN:-}
+      SIDECAR_DEFAULT_LANGUAGE: ${SIDECAR_DEFAULT_LANGUAGE:-}
+      SIDECAR_DRY_RUN: ${SIDECAR_DRY_RUN:-}
     ports:
       - "${WEBHOOK_PORT:-8787}:8787"
     extra_hosts:
@@ -22,8 +31,9 @@ services:
     volumes:
       # One mount, not separate mounts for downloads and library.
       - ${MEDIA_PATH:?set MEDIA_PATH in deploy/.env}:/mnt/media
-      - ${CONFIG_PATH:?set CONFIG_PATH in deploy/.env}:/config:ro
       - ${STATE_PATH:?set STATE_PATH in deploy/.env}:/state
+      # Optional config.toml for rules and mappings; an empty directory is fine.
+      - ${CONFIG_PATH:?set CONFIG_PATH in deploy/.env}:/config:ro
     tmpfs:
       - /tmp:size=16m,mode=1777
     logging:
