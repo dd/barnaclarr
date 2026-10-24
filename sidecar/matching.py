@@ -43,7 +43,8 @@ NOISE_WORDS = {
 }  # fmt: skip
 # Folders whose content belongs to bonus material, never to regular episodes.
 EXTRA_WORDS = {
-    "extra", "extras", "bonus", "bonuses", "special", "specials", "sp", "menu", "menus", "bd",
+    "extra", "extras", "bonus", "bonuses", "special", "specials", "sp", "sps", "omake", "omakes",
+    "menu", "menus", "bd",
     "dvd", "scan", "scans", "bdcg", "cg", "booklet", "cd", "cds", "ost", "music", "nc",
     "ncop", "nced", "op", "ed", "opening", "ending", "trailer", "trailers", "pv", "pvs", "cm",
     "cms", "preview", "previews", "бонус", "бонусы", "доп", "допы", "спешл", "спешлы", "сканы",
@@ -169,29 +170,60 @@ class Track:
         )
 
 
+def _roles(folded: str) -> list[tuple[str, str]]:
+    """What a word means; [] for a word that belongs to a group name.
+
+    Glued words such as "RuSound", "EngSubs" or "SubsRus" are a language plus a
+    container word.
+    """
+    if folded in LANGUAGE_WORDS:
+        return [("language", LANGUAGE_WORDS[folded])]
+    for kind, words in (
+        ("signs", SIGNS_WORDS),
+        ("forced", FORCED_WORDS),
+        ("sdh", SDH_WORDS),
+        ("container", CONTAINER_WORDS),
+        ("noise", NOISE_WORDS),
+    ):
+        if folded in words:
+            return [(kind, folded)]
+    if NUMERIC.fullmatch(folded):
+        return [("noise", folded)]
+    for split in range(2, len(folded) - 1):
+        head, tail = folded[:split], folded[split:]
+        if head in LANGUAGE_WORDS and tail in CONTAINER_WORDS:
+            return [("language", LANGUAGE_WORDS[head]), ("container", tail)]
+        if head in CONTAINER_WORDS and tail in LANGUAGE_WORDS:
+            return [("container", head), ("language", LANGUAGE_WORDS[tail])]
+    return []
+
+
 def _describe(text: str, info: dict) -> list[str]:
-    """Classify one folder or name fragment; return the remaining words as a group name."""
-    words = WORD.findall(text)
-    languages = {LANGUAGE_WORDS[w.casefold()] for w in words if w.casefold() in LANGUAGE_WORDS}
+    """Classify one folder or name fragment; return what is left as a group name.
+
+    The group keeps its own spelling ("AleX_MytH & Hollow", "Suzaku&SPAWN2");
+    only recognized words, brackets and dangling separators are removed.
+    """
+    languages = set()
+    pieces, last = [], 0
+    for match in WORD.finditer(text):
+        roles = _roles(match[0].casefold())
+        for kind, value in roles:
+            if kind == "language":
+                languages.add(value)
+            elif kind in {"signs", "forced", "sdh"}:
+                info[kind] = True
+        if roles:
+            pieces.append(text[last : match.start()] + "\0")
+            last = match.end()
+    pieces.append(text[last:])
     if len(languages) == 1:
         info["language"] = languages.pop()
-    group = []
-    for word in words:
-        folded = word.casefold()
-        if folded in SIGNS_WORDS:
-            info["signs"] = True
-        elif folded in FORCED_WORDS:
-            info["forced"] = True
-        elif folded in SDH_WORDS:
-            info["sdh"] = True
-        elif not (
-            folded in LANGUAGE_WORDS
-            or folded in CONTAINER_WORDS
-            or folded in NOISE_WORDS
-            or NUMERIC.fullmatch(folded)
-        ):
-            group.append(word)
-    return group
+    group = re.sub(r"[\[\](){}]", " ", "".join(pieces)).replace(".", " ")
+    # Separators next to removed words go too: "Crunchyroll - ENG", "Signs & Songs".
+    group = re.sub(r"[\s\-_&+,;:]*\0[\s\-_&+,;:]*", " ", group)
+    group = re.sub(r"\s+", " ", group).strip(" -_&+,;:")
+    return [group] if WORD.search(group) else []
 
 
 def describe(

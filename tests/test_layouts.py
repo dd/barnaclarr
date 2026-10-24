@@ -214,6 +214,32 @@ LAYOUTS = {
             ".SovetRomantica Signs.ru.ass",
         },
     ),
+    "lupin_vcb_short_names_with_sps": (
+        "[VCB-Studio] Lupin the Third Mine Fujiko to Iu Onna [Ma10p_1080p]",
+        "[VCB-Studio] Lupin the Third Mine Fujiko to Iu Onna [{n}][Ma10p_1080p][x265_flac].mkv",
+        [
+            "SPs/[VCB-Studio] Lupin the Third Mine Fujiko to Iu Onna [NCOP][Ma10p_1080p][x265_flac].mkv",
+            "SPs/[VCB-Studio] Lupin the Third Mine Fujiko to Iu Onna [PV][Ma10p_720p][x265_flac].mkv",
+            "[Audio]/KRT/[VCB-Studio] Lupin the Third Mine Fujiko to Iu Onna [{n}].mka",
+            "[Audio]/RG Kujian/[VCB-Studio] Lupin the Third Mine Fujiko to Iu Onna [{n}].mka",
+            "[Subtitle]/AleX_MytH & Hollow/[VCB-Studio] Lupin the Third Mine Fujiko to Iu Onna [{n}].ass",
+        ],
+        "ru",
+        {".KRT.ru.mka", ".RG Kujian.ru.mka", ".AleX_MytH & Hollow.ru.ass"},
+    ),
+    "black_lagoon_omake_glued_rusound": (
+        "Black Lagoon",
+        "BLACK LAGOON {n} [Title {n}] (BD 1920x1080 x264 AAC).mp4",
+        [
+            "Omake/Omake {n} (BD 1920x1080 x264 AAC).mp4",
+            "RuSound/AZAZELo/BLACK LAGOON {n}.mka",
+            "RuSound/MC Ent/BLACK LAGOON {n}.mka",
+            "RuSound/Suzaku&SPAWN2/BLACK LAGOON {n}.mka",
+            "Sub/BLACK LAGOON {n}.ass",
+        ],
+        "und",
+        {".AZAZELo.ru.mka", ".MC Ent.ru.mka", ".Suzaku&SPAWN2.ru.mka", ".und.ass"},
+    ),
     "renamed_sidecars_by_sibling_number": (
         "[X] Show [BD]",
         "[X] Show {n} [BD 1080p].mkv",

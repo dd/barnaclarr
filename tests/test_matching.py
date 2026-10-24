@@ -92,7 +92,27 @@ def test_sequence_numbers(stems, expected):
 @pytest.mark.parametrize(
     "name,extra",
     [("BD menu", True), ("Special", True), ("Scan", True), ("BDCG", True), ("Extras", True),
-     ("RUS Sound", False), ("Fonts", False), ("Надписи", False)],
+     ("SPs", True), ("Omake", True), ("RUS Sound", False), ("RuSound", False),
+     ("Fonts", False), ("Надписи", False)],
 )  # fmt: skip
 def test_extra_dirs(name, extra):
     assert is_extra_dir(name) is extra
+
+
+@pytest.mark.parametrize(
+    "relative,suffix",
+    [
+        ("RuSound/AZAZELo/x.mka", ".AZAZELo.ru.mka"),
+        ("EngSubs/x.ass", ".en.ass"),
+        ("SubsRus/x.ass", ".ru.ass"),
+        ("[Subtitle]/AleX_MytH & Hollow/x.ass", ".AleX_MytH & Hollow.und.ass"),
+        ("RuSound/Suzaku&SPAWN2/x.mka", ".Suzaku&SPAWN2.ru.mka"),
+        ("Subs/GJM/Signs & Songs/x.ass", ".GJM Signs.und.ass"),
+        ("Crunchyroll - ENG/x.ass", ".Crunchyroll.en.ass"),
+        ("Audio 5.1 [DTS XLL]/x.mka", ".und.mka"),
+    ],
+)
+def test_group_names_keep_their_spelling(relative, suffix):
+    """Glued language/container words split; group names keep punctuation."""
+    ext = relative.rsplit(".", 1)[1]
+    assert describe(relative, "", [], "und").suffix(ext) == suffix
