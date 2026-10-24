@@ -4,6 +4,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import hmac
 import json
 import logging
+import re
 import threading
 
 from .engine import Engine
@@ -79,6 +80,16 @@ def handler_class(config):
     return Handler
 
 
+def describe_error(exc: Exception) -> str:
+    """Type and message for logs and the jobs table, with URL credentials masked.
+
+    Messages carry paths and HTTP statuses; the API key travels in a header and
+    never appears in them, but a sonarr_url may embed user:password.
+    """
+    message = re.sub(r"(\w+://)[^/@\s]+@", r"\1***@", str(exc))
+    return f"{type(exc).__name__}: {message}"[:1000] if message else type(exc).__name__
+
+
 def worker(config, stop: threading.Event):
     state = State(config.database)
     try:
@@ -93,9 +104,8 @@ def worker(config, stop: threading.Event):
                 engine.process(json.loads(job["payload"]))
             except Exception as exc:
                 # This is the job isolation boundary: preserve failed work and retry.
-                # Avoid exception strings containing credential-bearing request URLs.
-                error = type(exc).__name__
-                LOG.error("job=%s failure=%s; inspect/replay event for diagnosis", job["id"], error)
+                error = describe_error(exc)
+                LOG.error("job=%s attempt=%s failed: %s", job["id"], job["attempts"] + 1, error)
                 state.finish(job, error)
             else:
                 state.finish(job)

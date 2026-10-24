@@ -4,7 +4,7 @@ import json
 import pytest
 
 from sidecar.config import Config
-from sidecar.server import handler_class
+from sidecar.server import describe_error, handler_class
 from sidecar.state import State
 
 
@@ -93,3 +93,15 @@ def test_failed_job_retry_and_recovery(tmp_path):
     row = state.db.execute("SELECT status,error FROM jobs").fetchone()
     assert tuple(row) == ("failed", "PermissionError")
     state.close()
+
+
+def test_job_error_keeps_message_and_masks_url_credentials():
+    """Failed jobs say what went wrong without leaking URL credentials."""
+    from urllib.error import URLError
+
+    from sidecar.config import UnsafePath
+
+    error = describe_error(UnsafePath("Outside allowed roots: /mnt/media/x"))
+    assert error == "UnsafePath: Outside allowed roots: /mnt/media/x"
+    masked = describe_error(URLError("http://user:secret@sonarr:8989/api refused"))
+    assert "secret" not in masked and "***@sonarr" in masked
