@@ -234,6 +234,8 @@ sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep sidecar) python -
 
 Имя собирается из папок раздачи: обозначения языка (`ENG`, `English`, `[rus]`, `German`…) становятся языком дорожки, служебные слова (`Sound`, `Audio`, `Dub`, `Subs`, `Озвучка`, `Full`, `ass`, `5.1`, `DTS`...) отбрасываются, остаётся название группы. Языки распознаются по кодам ISO и названиям на английском и русском.
 
+Название берётся из одного места, без склейки: если в имени файла после имени видео есть подпись (`….RikuSempai.rus.ass`), используется она; иначе — самая глубокая папка с названием (`RUS Subs/SovetRomantica/Надписи` → `SovetRomantica`). Поэтому `RUS Subs/RS/….RikuSempai.rus.ass` даёт `RikuSempai`, а не `RS RikuSempai`.
+
 | Путь в раздаче | Суффикс рядом с серией |
 | --- | --- |
 | `Audio/English Dub/…mka` | `.en.mka` |

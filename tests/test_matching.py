@@ -116,3 +116,17 @@ def test_group_names_keep_their_spelling(relative, suffix):
     """Glued language/container words split; group names keep punctuation."""
     ext = relative.rsplit(".", 1)[1]
     assert describe(relative, "", [], "und").suffix(ext) == suffix
+
+
+@pytest.mark.parametrize(
+    "relative,extra,title",
+    [
+        ("RUS Subs/RS/x.RikuSempai.rus.ass", "RikuSempai.rus", "RikuSempai"),
+        ("Subs/SovetRomantica/Надписи/x.ass", "", "SovetRomantica Signs"),
+        ("Studio/Anime Team/x.mka", "", "Anime Team"),
+        ("Studio/Anime Team/x.mka", None, "Anime Team"),
+    ],
+)
+def test_title_uses_one_group_name(relative, extra, title):
+    """The file's own label wins, otherwise the deepest folder; names are never merged."""
+    assert describe(relative, extra, [], "und").title == title

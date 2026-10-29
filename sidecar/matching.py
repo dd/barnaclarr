@@ -238,14 +238,19 @@ def describe(
     folders win the language. `extra` is the filename part after the source video
     stem ("AniStar", "Reanimedia_full"); without an exact stem match only bracketed
     or trailing dotted language/flag tags of the filename are trusted.
+
+    The title uses one group name, never a merge of several: the filename part
+    labels this very file ("…RikuSempai.rus.ass" in folder "RS"), otherwise the
+    deepest named folder ("RUS Subs/SovetRomantica/Надписи" -> SovetRomantica).
     """
     path = Path(relative)
     info: dict = {}
-    groups: list[str] = []
+    folder_groups: list[str] = []
     for part in path.parts[:-1]:
-        groups += _describe(part, info)
+        folder_groups += _describe(part, info)
+    file_groups: list[str] = []
     if extra is not None:
-        groups += _describe(extra, info)
+        file_groups = _describe(extra, info)
     else:
         tags = re.findall(r"\[([^]]*)\]|\(([^)]*)\)", path.stem)
         tags = [a or b for a, b in tags]
@@ -255,17 +260,14 @@ def describe(
             known = LANGUAGE_WORDS.keys() | SIGNS_WORDS | FORCED_WORDS | SDH_WORDS
             if words and words <= known:
                 _describe(tag, info)
+    groups = file_groups or folder_groups[-1:]
     language = info.get("language")
     for rule in rules:
         if re.search(rule["pattern"], relative, flags=re.IGNORECASE):
             language = rule.get("language", language)
             if "group" in rule:
                 groups = [rule["group"]]
-    unique = []
-    for group in groups:
-        if group.casefold() not in {g.casefold() for g in unique}:
-            unique.append(group)
-    title = " ".join(unique + (["Signs"] if info.get("signs") else []))
+    title = " ".join(groups + (["Signs"] if info.get("signs") else []))
     flags = [f for f in ("forced", "sdh") if info.get(f)]
     return Track(language or default_language, title[:80].strip(), flags)
 

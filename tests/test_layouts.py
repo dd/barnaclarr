@@ -240,6 +240,19 @@ LAYOUTS = {
         "und",
         {".AZAZELo.ru.mka", ".MC Ent.ru.mka", ".Suzaku&SPAWN2.ru.mka", ".und.ass"},
     ),
+    "megami_cafe_terrace_one_group_name": (
+        "[ReinForce] Megami no Cafe Terrace [BDRip 1920x1080 x264 FLAC]",
+        "[ReinForce] Megami no Cafe Terrace {n} (BDRip 1920x1080 x264 FLAC).mkv",
+        [
+            "ENG Subs/[ReinForce] Megami no Cafe Terrace {n} (BDRip 1920x1080 x264 FLAC).CR.eng.ass",
+            "RUS Sound/[ReinForce] Megami no Cafe Terrace {n} (BDRip 1920x1080 x264 FLAC).AniLibria.mka",
+            "RUS Subs/CR/[ReinForce] Megami no Cafe Terrace {n} (BDRip 1920x1080 x264 FLAC).CR.rus.ass",
+            "RUS Subs/RS/[ReinForce] Megami no Cafe Terrace {n} (BDRip 1920x1080 x264 FLAC).RikuSempai.rus.ass",
+            "RUS Subs/Надписи/[ReinForce] Megami no Cafe Terrace {n} (BDRip 1920x1080 x264 FLAC).надписи.rus.ass",
+        ],
+        "und",
+        {".CR.en.ass", ".AniLibria.ru.mka", ".CR.ru.ass", ".RikuSempai.ru.ass", ".Signs.ru.ass"},
+    ),
     "renamed_sidecars_by_sibling_number": (
         "[X] Show [BD]",
         "[X] Show {n} [BD 1080p].mkv",
