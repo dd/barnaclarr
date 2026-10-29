@@ -121,6 +121,52 @@ def test_queued_event_is_logged_instead_of_http_status(tmp_path, caplog):
         request(tmp_path, {"eventType": "Test"}, authorization="wrong")
     messages = [r.getMessage() for r in caplog.records]
     assert messages == [
-        "job=1 queued: Download Kaiba",
-        "webhook rejected: missing or wrong Authorization header",
+        "[sonarr] job=1 queued: Download Kaiba",
+        "[sonarr] webhook rejected: missing or wrong Authorization header",
     ]
+
+
+@pytest.mark.parametrize(
+    "payload,app",
+    [
+        ({"_app": "radarr", "movie": {"id": 1}}, "radarr"),
+        ({"_app": "sonarr", "series": {"id": 1}}, "sonarr"),
+        ({"movie": {"id": 1}}, "radarr"),
+        ({"series": {"id": 1}}, "sonarr"),
+    ],
+)
+def test_event_app_for_new_and_older_jobs(payload, app):
+    """Queued jobs carry their sender; jobs queued before Radarr support are Sonarr's."""
+    from sidecar.engine import event_app
+
+    assert event_app(payload) == app
+
+
+def test_worker_failure_is_tagged_with_app(tmp_path, caplog):
+    import logging
+    import threading
+
+    from sidecar.server import worker
+
+    config, _ = request(
+        tmp_path, {"eventType": "Download", "movie": {"id": 7}}, path="/webhook/radarr"
+    )
+    stop = threading.Event()
+
+    class StopAfterOne(logging.Handler):
+        def emit(self, record):
+            if "failed" in record.getMessage():
+                stop.set()
+
+    handler = StopAfterOne()
+    logging.getLogger("sidecar.server").addHandler(handler)
+    try:
+        with caplog.at_level(logging.ERROR, logger="sidecar.server"):
+            worker(config, stop)
+    finally:
+        logging.getLogger("sidecar.server").removeHandler(handler)
+    assert (
+        caplog.records[0]
+        .getMessage()
+        .startswith("[radarr] job=1 attempt=1 failed: ValueError: Radarr event received")
+    )

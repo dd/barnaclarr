@@ -153,7 +153,9 @@ def test_radarr_webhook_is_queued_as_radarr(tmp_path, caplog):
     state = State(config.database)
     assert json.loads(state.next_job()["payload"])["_app"] == "radarr"
     state.close()
-    assert "job=1 queued: Download Akira (1988)" in [r.getMessage() for r in caplog.records]
+    assert "[radarr] job=1 queued: Download Akira (1988)" in [
+        r.getMessage() for r in caplog.records
+    ]
     config, output = request(tmp_path, {"eventType": "Download"}, path="/webhook/radarr")
     assert b"400" in output
 

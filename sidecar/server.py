@@ -7,7 +7,7 @@ import logging
 import re
 import threading
 
-from .engine import Engine, event_subject
+from .engine import Engine, event_app, event_subject
 from .sonarr import Radarr, Sonarr
 from .state import State
 
@@ -50,24 +50,24 @@ def handler_class(config):
                 return
             supplied = self.headers.get("Authorization", "")
             if not hmac.compare_digest(supplied.encode(), ("Bearer " + token).encode()):
-                LOG.warning("webhook rejected: missing or wrong Authorization header")
+                LOG.warning("[%s] webhook rejected: missing or wrong Authorization header", app)
                 self.respond(401, {"error": "unauthorized"})
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
                 if not 0 < length <= 1024 * 1024:
-                    LOG.warning("webhook rejected: body of %s bytes", length)
+                    LOG.warning("[%s] webhook rejected: body of %s bytes", app, length)
                     self.respond(413, {"error": "body must be between 1 byte and 1 MiB"})
                     return
                 payload = json.loads(self.rfile.read(length))
                 if not isinstance(payload, dict) or not isinstance(payload.get("eventType"), str):
                     raise ValueError("Invalid event")
                 if payload["eventType"] == "Test":
-                    LOG.info("webhook Test from %s: ok", app.capitalize())
+                    LOG.info("[%s] webhook Test: ok", app)
                     self.respond(200, {"status": "ok"})
                     return
                 if payload["eventType"] not in {"Download", "Rename"}:
-                    LOG.info("webhook %s ignored", payload["eventType"])
+                    LOG.info("[%s] webhook %s ignored", app, payload["eventType"])
                     self.respond(200, {"status": "ignored"})
                     return
                 subject = "movie" if app == "radarr" else "series"
@@ -81,10 +81,10 @@ def handler_class(config):
                     job_id = state.enqueue(payload)
                 finally:
                     state.close()
-                LOG.info("job=%s queued: %s", job_id, event_subject(payload))
+                LOG.info("[%s] job=%s queued: %s", app, job_id, event_subject(payload))
                 self.respond(202, {"job_id": job_id})
             except (ValueError, KeyError, UnicodeDecodeError):
-                LOG.warning("webhook rejected: not a valid %s event", app.capitalize())
+                LOG.warning("[%s] webhook rejected: not a valid event", app)
                 self.respond(400, {"error": "invalid JSON event"})
 
     return Handler
@@ -115,12 +115,14 @@ def worker(config, stop: threading.Event):
             if job is None:
                 stop.wait(1)
                 continue
+            payload = json.loads(job["payload"])
+            label = f"[{event_app(payload)}] job={job['id']}"
             try:
-                engine.process(json.loads(job["payload"]), f"job={job['id']}")
+                engine.process(payload, label)
             except Exception as exc:
                 # This is the job isolation boundary: preserve failed work and retry.
                 error = describe_error(exc)
-                LOG.error("job=%s attempt=%s failed: %s", job["id"], job["attempts"] + 1, error)
+                LOG.error("%s attempt=%s failed: %s", label, job["attempts"] + 1, error)
                 state.finish(job, error)
             else:
                 state.finish(job)

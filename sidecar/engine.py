@@ -635,6 +635,13 @@ def _episodes(payload: dict) -> str:
     return ", ".join(names)
 
 
+def event_app(payload: dict) -> str:
+    """Which *arr sent the event; queued jobs carry it, older ones are Sonarr's."""
+    if payload.get("_app") in {"sonarr", "radarr"}:
+        return payload["_app"]
+    return "radarr" if isinstance(payload.get("movie"), dict) else "sonarr"
+
+
 def event_subject(payload: dict) -> str:
     """'Download Black Lagoon S01E03' or 'Download Akira (1988)' from a webhook payload."""
     if isinstance(payload.get("movie"), dict):

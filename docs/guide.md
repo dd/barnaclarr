@@ -170,26 +170,29 @@ srt, ass, ssa, sub, idx, mka, mp3, ac3, flac, m4a, aac
 В логах приложения (Apps → anime-sidecar → Logs) для каждого события Sonarr появится строка о постановке в очередь, а после обработки — итог, раздача, видео и список дорожек с указанием, откуда каждая взята:
 
 ```
-job=12 queued: Download Black Lagoon S01E01
-job=12 [dry-run] Download Black Lagoon S01E01: would link 3 tracks, 0 fonts
-job=12   release: Black Lagoon
-job=12   video:   S01E01 - The Black Lagoon [Bluray-1080p].mp4
-job=12   + .AZAZELo.ru.mka      <- RuSound/AZAZELo/BLACK LAGOON 01.mka
-job=12   + .MC Ent.ru.mka       <- RuSound/MC Ent/BLACK LAGOON 01.mka
-job=12   + .Suzaku&SPAWN2.ru.mka <- RuSound/Suzaku&SPAWN2/BLACK LAGOON 01.mka
-job=13 queued: Download The Boondocks S01E01
-job=13 [dry-run] Download The Boondocks S01E01: nothing to import, release has only video
-job=13   release: The Boondocks (2005) Season 1 S01 (1080p HMAX WEB-DL x265 YOGI)
+[sonarr] job=12 queued: Download Black Lagoon S01E01
+[sonarr] job=12 [dry-run] Download Black Lagoon S01E01: would link 3 tracks, 0 fonts
+[sonarr] job=12   release: Black Lagoon
+[sonarr] job=12   video:   S01E01 - The Black Lagoon [Bluray-1080p].mp4
+[sonarr] job=12   + .AZAZELo.ru.mka      <- RuSound/AZAZELo/BLACK LAGOON 01.mka
+[sonarr] job=12   + .MC Ent.ru.mka       <- RuSound/MC Ent/BLACK LAGOON 01.mka
+[sonarr] job=12   + .Suzaku&SPAWN2.ru.mka <- RuSound/Suzaku&SPAWN2/BLACK LAGOON 01.mka
+[sonarr] job=13 queued: Download The Boondocks S01E01
+[sonarr] job=13 [dry-run] Download The Boondocks S01E01: nothing to import, release has only video
+[sonarr] job=13   release: The Boondocks (2005) Season 1 S01 (1080p HMAX WEB-DL x265 YOGI)
+[radarr] job=14 queued: Download Akira (1988)
+[radarr] job=14 [dry-run] Download Akira (1988): would link 2 tracks, 1 fonts
 ```
 
-- `queued` — Sonarr прислал событие, задача поставлена в очередь под этим номером.
+- `[sonarr]` / `[radarr]` — от кого пришло событие; так помечены все строки задачи, в том числе ошибки.
+- `queued` — Sonarr или Radarr прислал событие, задача поставлена в очередь под этим номером.
 - `release` — папка раздачи, в которой искались дорожки; `video` — файл серии в медиатеке, рядом с которым они появятся.
 - `+` — дорожка: суффикс к имени видео и путь исходного файла внутри раздачи. Шрифты только считаются, без списка.
 - `-` — старая дорожка, которую модуль уберёт (например, при замене на лучший релиз).
 - `!` — уведомление: что пропущено и почему.
 - `nothing to import` с причиной: в раздаче только видео, или дополнительные файлы есть, но ни один не подошёл к этой серии (тогда смотри уведомления `!`).
 - `already in place` — дорожки уже созданы раньше, повторять нечего.
-- `webhook rejected: …` — Sonarr прислал запрос, который модуль не принял (например, неверный токен).
+- `webhook rejected: …` — Sonarr или Radarr прислал запрос, который модуль не принял (например, неверный токен).
 
 После включения записи вместо `[dry-run] … would link` будет `linked`. Проверки доступности (health-check) в лог не пишутся. Полный JSON-отчёт по каждой задаче можно включить переменной `SIDECAR_LOG_LEVEL: DEBUG`.
 
@@ -330,7 +333,7 @@ sudo sh -c 'chown 568:568 /mnt/tank/apps/anime-sidecar/config/*'
 
 **Дорожки не появились, в логе `"dry_run": true`.** Включён тестовый режим, см. [Включение записи](#2-включение-записи).
 
-**Задача в `jobs` со статусом `failed`.** В поле `error` и в логе приложения (`job=… failed: …`) записаны тип ошибки и её текст, например `UnsafePath: Outside allowed roots: /mnt/media/...`. Модуль повторяет задачу до шести раз с растущей паузой, после этого она остаётся `failed`. Частые причины:
+**Задача в `jobs` со статусом `failed`.** В поле `error` и в логе приложения (`[sonarr] job=… attempt=… failed: …`) записаны тип ошибки и её текст, например `UnsafePath: Outside allowed roots: /mnt/media/...`. Модуль повторяет задачу до шести раз с растущей паузой, после этого она остаётся `failed`. Частые причины:
 
 | Ошибка | Что значит |
 | --- | --- |

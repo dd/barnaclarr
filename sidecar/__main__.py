@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 from .config import Config
-from .engine import Engine
+from .engine import Engine, event_app
 from .server import serve
 from .sonarr import Radarr, Sonarr
 from .state import State
@@ -69,7 +69,8 @@ def main():
                     state,
                     Radarr(config) if config.radarr_url else None,
                 )
-                report = engine.process(json.loads(args.payload.read_text()))
+                payload = json.loads(args.payload.read_text())
+                report = engine.process(payload, f"[{event_app(payload)}] event")
                 print(json.dumps(report, ensure_ascii=False, indent=2))
             elif args.command == "jobs":
                 print(
