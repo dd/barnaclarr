@@ -82,13 +82,24 @@ class Release:
         return extra_root(self.root, path)
 
 
+@dataclass
+class Import:
+    """One library file Sonarr or Radarr just imported, and where it came from."""
+
+    file_id: int
+    owner: str
+    target: Path
+    source: str | None
+    ids: set[int]
+
+
 def owner_key(series_id: int, ids: set[int]) -> str:
     return str(series_id) + ":" + ",".join(map(str, sorted(ids)))
 
 
 class Engine:
-    def __init__(self, config: Config, sonarr, state: State):
-        self.config, self.sonarr, self.state = config, sonarr, state
+    def __init__(self, config: Config, sonarr, state: State, radarr=None):
+        self.config, self.sonarr, self.state, self.radarr = config, sonarr, state, radarr
 
     def _add(self, plan: Plan, source: Path, dest: Path, owner: str, suffix: str, kind: str):
         confined(dest, self.config.library_roots + [self.config.font_root])
@@ -225,41 +236,58 @@ class Engine:
         release.assignments[zone] = (pool, result)
         return release.assignments[zone]
 
-    def _history(self, plan: Plan, series_id: int) -> dict[int, Path]:
-        """Episode file ID -> original download path from Sonarr import history."""
+    def _history(self, plan: Plan, client, name: str, route: str, **params) -> dict:
+        """File ID or imported path -> original download path from import history."""
         try:
-            records = self.sonarr.get("history/series", seriesId=series_id, eventType=3)
+            records = client.get(route, eventType=3, **params)
         except (OSError, ValueError) as exc:
-            plan.note(f"Sonarr history unavailable: {type(exc).__name__}")
+            plan.note(f"{name} history unavailable: {type(exc).__name__}")
             return {}
         result = {}
         for record in records if isinstance(records, list) else []:
             data = {k.casefold(): v for k, v in (record.get("data") or {}).items()}
-            if data.get("fileid") and data.get("droppedpath"):
-                result.setdefault(int(data["fileid"]), Path(data["droppedpath"]))
+            dropped = data.get("droppedpath")
+            if not dropped:
+                continue
+            if data.get("fileid"):
+                result.setdefault(int(data["fileid"]), Path(dropped))
+            if data.get("importedpath"):
+                result.setdefault(data["importedpath"], Path(dropped))
         return result
 
     def _download(self, plan, payload, series_id, series_path, episodes, files):
-        incoming = payload.get("episodeFiles") or [payload["episodeFile"]]
-        releases: dict[Path, Release] = {}
-        font_targets = set()
-        font_faces = None
-        history = None
-        for imported in incoming:
+        items = []
+        for imported in payload.get("episodeFiles") or [payload["episodeFile"]]:
             file_id = int(imported["id"])
             if file_id not in files:
                 plan.note(f"Obsolete import, episode file {file_id} no longer exists")
                 continue
-            video = files[file_id]
             ids = {e["id"] for e in episodes if e.get("episodeFileId") == file_id}
             if not ids:
                 raise ValueError("Sonarr has not associated the imported file with episodes")
-            owner = owner_key(series_id, ids)
-            target = confined(Path(video["path"]), [series_path], exists=True)
-            source_value = imported.get("sourcePath") or payload.get("sourcePath")
-            if not source_value:
+            target = confined(Path(files[file_id]["path"]), [series_path], exists=True)
+            source = imported.get("sourcePath") or payload.get("sourcePath")
+            items.append(Import(file_id, owner_key(series_id, ids), target, source, ids))
+        history = lambda: self._history(  # noqa: E731
+            plan, self.sonarr, "Sonarr", "history/series", seriesId=series_id
+        )
+        self._import(plan, items, episodes, history, movie=False)
+
+    def _import(self, plan, items: list["Import"], episodes, load_history, movie: bool):
+        """Plan sidecars and fonts for imported library files from their releases.
+
+        Episodes match tracks by stem, sibling numbering or Sonarr numbering; a movie
+        release with a single regular video gives every track to that video.
+        """
+        releases: dict[Path, Release] = {}
+        font_targets = set()
+        font_faces = None
+        history = None
+        for item in items:
+            file_id, owner, target, ids = item.file_id, item.owner, item.target, item.ids
+            if not item.source:
                 raise ValueError("No sourcePath; use On Import, or replay with explicit sourcePath")
-            source = confined(Path(source_value), self.config.download_roots, exists=True)
+            source = confined(Path(item.source), self.config.download_roots, exists=True)
             root = self.config.release_root(source)
             if root not in releases:
                 releases[root] = self._scan(plan, root)
@@ -270,15 +298,15 @@ class Engine:
             if source.is_file():
                 source_video = source
             else:
-                # Directory imports: Sonarr history names the original file, otherwise
-                # the release's only regular video numbered as these episodes.
+                # Directory imports: import history names the original file, otherwise
+                # the release's only regular video for this movie or these episodes.
                 if history is None:
-                    history = self._history(plan, series_id)
-                dropped = history.get(file_id)
+                    history = load_history()
+                dropped = history.get(file_id) or history.get(str(target))
                 same = [
                     v
                     for v in release.videos
-                    if release.zone(v) is None and episode_ids(v.name, episodes) == ids
+                    if release.zone(v) is None and (movie or episode_ids(v.name, episodes) == ids)
                 ]
                 if dropped is not None and dropped in release.videos:
                     source_video = dropped
@@ -286,7 +314,9 @@ class Engine:
                     source_video = same[0] if len(same) == 1 else None
             zone = release.zone(source_video or source / "_")
             pool, assigned = self._assignments(release, zone)
-            same_episode = [v for v in pool if episode_ids(v.name, episodes) == ids]
+            same_episode = (
+                [] if movie else [v for v in pool if episode_ids(v.name, episodes) == ids]
+            )
             tracks = []
             skipped = False
             for path in release.sidecars:
@@ -310,7 +340,14 @@ class Engine:
                     if source_video is not None:
                         if owner_video != source_video:
                             continue
-                    elif episode_ids(owner_video.name, episodes) != ids:
+                    elif movie or episode_ids(owner_video.name, episodes) != ids:
+                        continue
+                elif movie:
+                    # A movie release with one regular video: every track is for it,
+                    # whatever its name ("Movie.rus.srt" next to "Movie.2019.1080p.mkv").
+                    if len(pool) != 1 or source_video not in (None, pool[0]):
+                        plan.note(f"Unrecognized sidecar, add a mapping: {relative}")
+                        skipped = True
                         continue
                 else:
                     sidecar_ids = episode_ids(path.name, episodes)
@@ -418,15 +455,10 @@ class Engine:
         if event not in {"Download", "Rename"}:
             plan.note(f"Ignored event: {event}")
             return plan
-        series_id = int(payload["series"]["id"])
-        series = self.sonarr.get(f"series/{series_id}")
-        series_path = confined(Path(series["path"]), self.config.library_roots, exists=True)
-        episodes = self.sonarr.get("episode", seriesId=series_id)
-        files = {f["id"]: f for f in self.sonarr.get("episodefile", seriesId=series_id)}
-        if event == "Download":
-            self._download(plan, payload, series_id, series_path, episodes, files)
+        if payload.get("_app") == "radarr" or "movie" in payload:
+            self._plan_movie(plan, payload, event)
         else:
-            self._rename(plan, series_id, series_path, episodes, files)
+            self._plan_series(plan, payload, event)
         # Preflight duplicate destinations before any filesystem mutation.
         destinations = {}
         for action in plan.actions:
@@ -435,13 +467,54 @@ class Engine:
                 raise FileExistsError(f"Two sources target {action.destination}")
         return plan
 
-    def _rename(self, plan, series_id, series_path, episodes, files):
+    def _plan_series(self, plan: Plan, payload: dict, event: str):
+        if self.sonarr is None:
+            raise ValueError("Sonarr event received, but SIDECAR_SONARR_URL is not set")
+        series_id = int(payload["series"]["id"])
+        series = self.sonarr.get(f"series/{series_id}")
+        series_path = confined(Path(series["path"]), self.config.library_roots, exists=True)
+        episodes = self.sonarr.get("episode", seriesId=series_id)
+        files = {f["id"]: f for f in self.sonarr.get("episodefile", seriesId=series_id)}
+        if event == "Download":
+            self._download(plan, payload, series_id, series_path, episodes, files)
+            return
+        moves = []
         for file_id, video in files.items():
             ids = {e["id"] for e in episodes if e.get("episodeFileId") == file_id}
-            if not ids:
+            if ids:
+                target = confined(Path(video["path"]), [series_path], exists=True)
+                moves.append((owner_key(series_id, ids), target))
+        self._rename(plan, moves)
+
+    def _plan_movie(self, plan: Plan, payload: dict, event: str):
+        if self.radarr is None:
+            raise ValueError("Radarr event received, but SIDECAR_RADARR_URL is not set")
+        movie_id = int(payload["movie"]["id"])
+        movie = self.radarr.get(f"movie/{movie_id}")
+        movie_path = confined(Path(movie["path"]), self.config.library_roots, exists=True)
+        files = {f["id"]: f for f in self.radarr.get("moviefile", movieId=movie_id)}
+        owner = f"movie:{movie_id}"
+        if event == "Rename":
+            targets = [confined(Path(f["path"]), [movie_path], exists=True) for f in files.values()]
+            self._rename(plan, [(owner, target) for target in targets])
+            return
+        items = []
+        for imported in payload.get("movieFiles") or [payload["movieFile"]]:
+            file_id = int(imported["id"])
+            if file_id not in files:
+                plan.note(f"Obsolete import, movie file {file_id} no longer exists")
                 continue
-            owner = owner_key(series_id, ids)
-            target = confined(Path(video["path"]), [series_path], exists=True)
+            target = confined(Path(files[file_id]["path"]), [movie_path], exists=True)
+            source = imported.get("sourcePath") or payload.get("sourcePath")
+            items.append(Import(file_id, owner, target, source, {movie_id}))
+        history = lambda: self._history(  # noqa: E731
+            plan, self.radarr, "Radarr", "history/movie", movieId=movie_id
+        )
+        self._import(plan, items, [], history, movie=True)
+
+    def _rename(self, plan: Plan, moves: list[tuple[str, Path]]):
+        """Relink managed tracks of each owner next to its current video name."""
+        for owner, target in moves:
             for row in self.state.links(owner):
                 old = confined(Path(row["destination"]), self.config.library_roots)
                 if not old.exists() or signature(old) != row["signature"]:
@@ -563,7 +636,13 @@ def _episodes(payload: dict) -> str:
 
 
 def event_subject(payload: dict) -> str:
-    """'Download Black Lagoon S01E03' from a Sonarr webhook payload."""
+    """'Download Black Lagoon S01E03' or 'Download Akira (1988)' from a webhook payload."""
+    if isinstance(payload.get("movie"), dict):
+        movie = payload["movie"]
+        title = movie.get("title") or f"movie {movie.get('id')}"
+        if movie.get("year"):
+            title += f" ({movie['year']})"
+        return " ".join(filter(None, [payload.get("eventType"), title]))
     series = payload.get("series") or {}
     title = series.get("title") or f"series {series.get('id')}"
     return " ".join(filter(None, [payload.get("eventType"), title, _episodes(payload)]))

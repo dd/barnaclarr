@@ -18,6 +18,9 @@ ENVIRONMENT = {
     "SONARR_URL": ("sonarr_url", "str"),
     "SONARR_API_KEY": ("sonarr_api_key", "str"),
     "SONARR_API_KEY_FILE": ("api_key_file", "path"),
+    "RADARR_URL": ("radarr_url", "str"),
+    "RADARR_API_KEY": ("radarr_api_key", "str"),
+    "RADARR_API_KEY_FILE": ("radarr_api_key_file", "path"),
     "API_VERSION": ("api_version", "str"),
     "WEBHOOK_TOKEN": ("webhook_token", "str"),
     "WEBHOOK_TOKEN_FILE": ("webhook_token_file", "path"),
@@ -54,12 +57,15 @@ class Config:
     library_roots: list[Path]
     font_root: Path
     database: Path = Path("/state/sidecar.sqlite3")
-    # Required: Sonarr's address as seen from this container.
+    # Sonarr and/or Radarr, as seen from this container; at least one is required.
     sonarr_url: str = ""
+    radarr_url: str = ""
     api_version: str = "v3"
     # Secrets are given directly (environment) or read from files.
     sonarr_api_key: str = field(default="", repr=False)
     api_key_file: Path = Path("/config/sonarr-api-key")
+    radarr_api_key: str = field(default="", repr=False)
+    radarr_api_key_file: Path = Path("/config/radarr-api-key")
     webhook_token: str = field(default="", repr=False)
     webhook_token_file: Path = Path("/config/webhook-token")
     dry_run: bool = True
@@ -72,6 +78,9 @@ class Config:
 
     def api_key(self) -> str:
         return self.sonarr_api_key or self.api_key_file.read_text().strip()
+
+    def radarr_key(self) -> str:
+        return self.radarr_api_key or self.radarr_api_key_file.read_text().strip()
 
     def token(self) -> str:
         return self.webhook_token or self.webhook_token_file.read_text().strip()
@@ -97,7 +106,13 @@ class Config:
                 raise ValueError(f"{key} is required (SIDECAR_{key.upper()} or config.toml)")
         for key in ("download_roots", "library_roots"):
             data[key] = [Path(x) for x in data[key]]
-        for key in ("font_root", "database", "api_key_file", "webhook_token_file"):
+        for key in (
+            "font_root",
+            "database",
+            "api_key_file",
+            "radarr_api_key_file",
+            "webhook_token_file",
+        ):
             if key in data:
                 data[key] = Path(data[key])
         unknown = set(data) - set(cls.__dataclass_fields__)
@@ -112,8 +127,11 @@ class Config:
             for dest in config.library_roots + [config.font_root]:
                 if source.is_relative_to(dest) or dest.is_relative_to(source):
                     raise ValueError("Download and destination roots must not overlap")
-        if not config.sonarr_url.startswith(("http://", "https://")):
-            raise ValueError("SIDECAR_SONARR_URL must be an http(s) address of Sonarr")
+        if not config.sonarr_url and not config.radarr_url:
+            raise ValueError("Set SIDECAR_SONARR_URL and/or SIDECAR_RADARR_URL")
+        for name, url in (("SONARR", config.sonarr_url), ("RADARR", config.radarr_url)):
+            if url and not url.startswith(("http://", "https://")):
+                raise ValueError(f"SIDECAR_{name}_URL must be an http(s) address")
         if config.api_version not in {"v3", "v5"}:
             raise ValueError("Unsupported Sonarr API version")
         if not isinstance(config.dry_run, bool):

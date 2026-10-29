@@ -26,6 +26,9 @@ services:
       # Sonarr as reachable from this container: NAS LAN IP or host.docker.internal.
       SIDECAR_SONARR_URL: http://host.docker.internal:8989
       SIDECAR_SONARR_API_KEY: <Sonarr Settings > General > API Key>
+      # Optional: movies from Radarr too (webhook /webhook/radarr). Remove if unused.
+      SIDECAR_RADARR_URL: http://host.docker.internal:7878
+      SIDECAR_RADARR_API_KEY: <Radarr Settings > General > API Key>
       # Random string of 32+ characters, e.g. `openssl rand -hex 32`.
       SIDECAR_WEBHOOK_TOKEN: <webhook token>
       SIDECAR_DEFAULT_LANGUAGE: und

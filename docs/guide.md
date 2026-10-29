@@ -53,7 +53,7 @@ Cells at Work! (2018)/Season 01/
 
 ## Что нужно заранее
 
-- **TrueNAS SCALE** с приложениями Sonarr, торрент-клиентом (например, qBittorrent) и Jellyfin.
+- **TrueNAS SCALE** с приложениями Sonarr и/или Radarr, торрент-клиентом (например, qBittorrent) и Jellyfin.
 - **Загрузки и медиатека в одном dataset.** Hardlink возможен только внутри одной файловой системы. Например, dataset `media` с папками `downloads/` и `anime/`. Подробнее и как проверить — в [storage.md](storage.md).
 - **Sonarr импортирует hardlinks:** Settings → Media Management → Use Hardlinks instead of Copy.
 - **Пути совпадают в Sonarr и торрент-клиенте:** оба видят один и тот же dataset под одним и тем же путём, например `/mnt/media`.
@@ -139,6 +139,26 @@ srt, ass, ssa, sub, idx, mka, mp3, ac3, flac, m4a, aac
 ```
 
 Оставь, например, `nfo, jpg, jpeg, png`. Список общий для всех сериалов: если дорожки нужны и обычным сериалам, добавь их корневые папки в `SIDECAR_LIBRARY_ROOTS`, а папки их загрузок — в `SIDECAR_DOWNLOAD_ROOTS`.
+
+
+## Настройка Radarr
+
+Фильмы обрабатываются так же, как сериалы; Sonarr и Radarr можно подключить оба или только один из них.
+
+1. **Настройки модуля:** добавь в `environment` адрес и ключ Radarr, а в списки папок — категорию загрузок Radarr и корневую папку фильмов:
+
+   ```yaml
+   SIDECAR_RADARR_URL: http://host.docker.internal:7878
+   SIDECAR_RADARR_API_KEY: <Radarr Settings > General > API Key>
+   SIDECAR_DOWNLOAD_ROOTS: /mnt/media/downloads/anime,/mnt/media/downloads/radarr
+   SIDECAR_LIBRARY_ROOTS: /mnt/media/anime,/mnt/media/movies
+   ```
+
+   Переразверни приложение.
+2. **Вебхук в Radarr:** Settings → Connect → + → Webhook, всё как для Sonarr, кроме адреса: `http://<IP NAS>:8787/webhook/radarr`. Триггеры: On File Import, On File Upgrade, On Rename. Токен тот же.
+3. **Import Extra Files** в Radarr (Settings → Media Management) — так же убери аудио и субтитры из списка расширений.
+
+Как модуль находит дорожки фильма: если в раздаче (без папок бонусов) одно видео, все дорожки относятся к нему, даже если называются иначе (`Akira.rus.srt` рядом с `Akira.1988.1080p.BluRay.mkv`). Если видео несколько — например, сборник фильмов, — дорожка берётся, только если её имя совпадает с именем видео или номер совпадает с номером соседнего видео; остальные пропускаются с уведомлением `Unrecognized sidecar`. В `mappings` для фильмов указывается ID фильма в Radarr.
 
 
 ## Проверка

@@ -1,6 +1,6 @@
 # Anime Sidecar Manager
 
-Hardlink-only импорт дополнительных аудиодорожек, субтитров и шрифтов после импорта видео Sonarr. Python, SQLite, fontTools, отдельный Docker-контейнер. Видео импортирует и переименовывает только Sonarr.
+Hardlink-only импорт дополнительных аудиодорожек, субтитров и шрифтов после импорта видео Sonarr (сериалы) или Radarr (фильмы). Python, SQLite, fontTools, отдельный Docker-контейнер. Видео импортирует и переименовывает только Sonarr/Radarr.
 
 Приложение рассчитано на TrueNAS SCALE 25.10. Проверено с Sonarr **5.0.0.2701** и Jellyfin **12.2**. Используется REST API `/api/v3`, совместимый также с Sonarr v4.
 
@@ -13,11 +13,11 @@ Hardlink-only импорт дополнительных аудиодорожек
 
 ## Behavior
 
-1. Sonarr присылает `Download` или `Rename` на защищённый Webhook. `Test` проверяет доступность без изменений. Остальные события игнорируются.
+1. Sonarr (`/webhook/sonarr`) или Radarr (`/webhook/radarr`) присылает `Download` или `Rename` на защищённый Webhook. `Test` проверяет доступность без изменений. Остальные события игнорируются.
 2. Событие сохраняется в SQLite до ответа HTTP 202. Один worker обрабатывает очередь; ошибки повторяются с задержкой, после шести попыток остаются в `failed`.
 3. REST API даёт **текущие** пути видео и связь episode ID -> episode file ID. Устаревшие события для уже заменённого file ID игнорируются.
 4. Приложение один раз рекурсивно сканирует релиз, определённый первым дочерним каталогом настроенного download root (например, `/mnt/media/downloads/anime/Release/...` ограничивает поиск `Release`), и использует результат для всех эпизодов события.
-5. Sidecar связывается с исходным видео по одному из признаков, по порядку: явный mapping; полный stem видео (`Video.ass`, `Video.AniStar.mka`, `Video.signs.ass`); номер в изменяющейся части имён соседних файлов (`ReLIFE 01` ↔ `ReLIFE 01`, при любой схеме имён); `SxxExx` или абсолютный номер из Sonarr. Неоднозначность приводит к пропуску и записи причины.
+5. Sidecar связывается с исходным видео по одному из признаков, по порядку: явный mapping; полный stem видео (`Video.ass`, `Video.AniStar.mka`, `Video.signs.ass`); номер в изменяющейся части имён соседних файлов (`ReLIFE 01` ↔ `ReLIFE 01`, при любой схеме имён); `SxxExx` или абсолютный номер из Sonarr. Для фильма, если в раздаче одно обычное видео, все дорожки относятся к нему. Неоднозначность приводит к пропуску и записи причины.
 6. Если Sonarr прислал только папку (On Import Complete), исходный файл берётся из истории импорта Sonarr (`droppedPath`), а при её отсутствии — из нумерации видео.
 7. Папки бонусов (`Extras`, `Special`, `SPs`, `Omake`, `BD menu`, `Scan`, `BDCG`, `NCOP/NCED`, `OST`...) не участвуют в сопоставлении обычных эпизодов: одинаково названные видео в `Special/` не создают неоднозначности. Если сам эпизод импортирован из такой папки, используется именно она.
 8. Имя назначения: `<stem видео Sonarr>.<название>.<язык>.<forced/sdh>.<ext>`. Название собирается из структуры раздачи без служебных слов: `ENG Subs/Crunchyroll ENG` → `Crunchyroll` (язык `en`), `Sounds/AniLibria [rus]` → `AniLibria` (язык `ru`), `Subs/GJM/Signs & Songs` → `GJM Signs`, `Russian Subtitles [Reanimedia]/Full [ass]` → `Reanimedia`. Хеши в имени не используются; при совпадении имён добавляется номер (`Track 2`). `idx/sub` получают одинаковое имя.
@@ -92,4 +92,4 @@ docker build -t ghcr.io/dd/sidecarr-extras-import:dev .
 
 ## Sources
 
-Контракты сверены с [Sonarr API](https://sonarr.tv/docs/api/), [Sonarr Webhook payload construction](https://github.com/Sonarr/Sonarr/blob/v5-develop/src/NzbDrone.Core/Notifications/Webhook/WebhookBase.cs), [Jellyfin external stream naming](https://github.com/jellyfin/jellyfin.org/blob/master/docs/general/server/media/_video-external-streams.md), [Jellyfin font configuration](https://jellyfin.org/docs/general/administration/configuration/#fonts) и [TrueNAS Custom Apps](https://apps.truenas.com/managing-apps/installing-custom-apps/).
+Контракты сверены с [Sonarr API](https://sonarr.tv/docs/api/), [Sonarr Webhook payload construction](https://github.com/Sonarr/Sonarr/blob/v5-develop/src/NzbDrone.Core/Notifications/Webhook/WebhookBase.cs), [Radarr Webhook payload construction](https://github.com/Radarr/Radarr/blob/develop/src/NzbDrone.Core/Notifications/Webhook/WebhookBase.cs), [Radarr import history](https://github.com/Radarr/Radarr/blob/develop/src/NzbDrone.Core/History/HistoryService.cs), [Jellyfin external stream naming](https://github.com/jellyfin/jellyfin.org/blob/master/docs/general/server/media/_video-external-streams.md), [Jellyfin font configuration](https://jellyfin.org/docs/general/administration/configuration/#fonts) и [TrueNAS Custom Apps](https://apps.truenas.com/managing-apps/installing-custom-apps/).

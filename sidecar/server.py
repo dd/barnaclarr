@@ -8,7 +8,7 @@ import re
 import threading
 
 from .engine import Engine, event_subject
-from .sonarr import Sonarr
+from .sonarr import Radarr, Sonarr
 from .state import State
 
 LOG = logging.getLogger(__name__)
@@ -44,7 +44,8 @@ def handler_class(config):
             )
 
         def do_POST(self):
-            if self.path != "/webhook/sonarr":
+            app = {"/webhook/sonarr": "sonarr", "/webhook/radarr": "radarr"}.get(self.path)
+            if app is None:
                 self.respond(404, {"error": "not found"})
                 return
             supplied = self.headers.get("Authorization", "")
@@ -62,17 +63,19 @@ def handler_class(config):
                 if not isinstance(payload, dict) or not isinstance(payload.get("eventType"), str):
                     raise ValueError("Invalid event")
                 if payload["eventType"] == "Test":
-                    LOG.info("webhook Test from Sonarr: ok")
+                    LOG.info("webhook Test from %s: ok", app.capitalize())
                     self.respond(200, {"status": "ok"})
                     return
                 if payload["eventType"] not in {"Download", "Rename"}:
                     LOG.info("webhook %s ignored", payload["eventType"])
                     self.respond(200, {"status": "ignored"})
                     return
-                if not isinstance(payload.get("series"), dict) or not isinstance(
-                    payload["series"].get("id"), int
+                subject = "movie" if app == "radarr" else "series"
+                if not isinstance(payload.get(subject), dict) or not isinstance(
+                    payload[subject].get("id"), int
                 ):
-                    raise ValueError("Missing series id")
+                    raise ValueError(f"Missing {subject} id")
+                payload["_app"] = app
                 state = State(config.database)
                 try:
                     job_id = state.enqueue(payload)
@@ -81,7 +84,7 @@ def handler_class(config):
                 LOG.info("job=%s queued: %s", job_id, event_subject(payload))
                 self.respond(202, {"job_id": job_id})
             except (ValueError, KeyError, UnicodeDecodeError):
-                LOG.warning("webhook rejected: not a valid Sonarr event")
+                LOG.warning("webhook rejected: not a valid %s event", app.capitalize())
                 self.respond(400, {"error": "invalid JSON event"})
 
     return Handler
@@ -91,7 +94,7 @@ def describe_error(exc: Exception) -> str:
     """Type and message for logs and the jobs table, with URL credentials masked.
 
     Messages carry paths and HTTP statuses; the API key travels in a header and
-    never appears in them, but a sonarr_url may embed user:password.
+    never appears in them, but a Sonarr/Radarr URL may embed user:password.
     """
     message = re.sub(r"(\w+://)[^/@\s]+@", r"\1***@", str(exc))
     return f"{type(exc).__name__}: {message}"[:1000] if message else type(exc).__name__
@@ -101,7 +104,12 @@ def worker(config, stop: threading.Event):
     state = State(config.database)
     try:
         state.recover()
-        engine = Engine(config, Sonarr(config), state)
+        engine = Engine(
+            config,
+            Sonarr(config) if config.sonarr_url else None,
+            state,
+            Radarr(config) if config.radarr_url else None,
+        )
         while not stop.is_set():
             job = state.next_job()
             if job is None:

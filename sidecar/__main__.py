@@ -12,7 +12,7 @@ from pathlib import Path
 from .config import Config
 from .engine import Engine
 from .server import serve
-from .sonarr import Sonarr
+from .sonarr import Radarr, Sonarr
 from .state import State
 
 
@@ -63,9 +63,13 @@ def main():
         state = State(config.database)
         try:
             if args.command == "event":
-                report = Engine(config, Sonarr(config), state).process(
-                    json.loads(args.payload.read_text())
+                engine = Engine(
+                    config,
+                    Sonarr(config) if config.sonarr_url else None,
+                    state,
+                    Radarr(config) if config.radarr_url else None,
                 )
+                report = engine.process(json.loads(args.payload.read_text()))
                 print(json.dumps(report, ensure_ascii=False, indent=2))
             elif args.command == "jobs":
                 print(

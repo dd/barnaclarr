@@ -25,7 +25,9 @@ class FakeSocket:
         pass
 
 
-def request(tmp_path, payload, authorization="Bearer " + "x" * 32, length=None):
+def request(
+    tmp_path, payload, authorization="Bearer " + "x" * 32, length=None, path="/webhook/sonarr"
+):
     token = tmp_path / "token"
     token.write_text("x" * 32)
     config = Config(
@@ -36,7 +38,7 @@ def request(tmp_path, payload, authorization="Bearer " + "x" * 32, length=None):
         webhook_token_file=token,
     )
     body = json.dumps(payload).encode()
-    headers = f"POST /webhook/sonarr HTTP/1.0\r\nAuthorization: {authorization}\r\nContent-Length: {length if length is not None else len(body)}\r\n\r\n".encode()
+    headers = f"POST {path} HTTP/1.0\r\nAuthorization: {authorization}\r\nContent-Length: {length if length is not None else len(body)}\r\n\r\n".encode()
     sock = FakeSocket(headers + body)
     handler_class(config)(sock, ("127.0.0.1", 0), None)
     return config, sock.output

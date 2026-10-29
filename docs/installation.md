@@ -27,8 +27,10 @@
 | `SIDECAR_DOWNLOAD_ROOTS` | да | папки категорий загрузок, например `/mnt/media/downloads/anime` |
 | `SIDECAR_LIBRARY_ROOTS` | да | корневые папки Sonarr, куда можно класть дорожки |
 | `SIDECAR_FONT_ROOT` | да | общая библиотека шрифтов внутри того же dataset |
-| `SIDECAR_SONARR_URL` | да | адрес Sonarr из контейнера: LAN IP NAS или `host.docker.internal`, с портом |
-| `SIDECAR_SONARR_API_KEY` или `SIDECAR_SONARR_API_KEY_FILE` | да | ключ из Sonarr Settings > General, значением или путём к файлу |
+| `SIDECAR_SONARR_URL` | Sonarr и/или Radarr | адрес Sonarr из контейнера: LAN IP NAS или `host.docker.internal`, с портом |
+| `SIDECAR_SONARR_API_KEY` или `SIDECAR_SONARR_API_KEY_FILE` | если задан Sonarr | ключ из Sonarr Settings > General, значением или путём к файлу |
+| `SIDECAR_RADARR_URL` | Sonarr и/или Radarr | адрес Radarr из контейнера, вебхук Radarr — `/webhook/radarr` |
+| `SIDECAR_RADARR_API_KEY` или `SIDECAR_RADARR_API_KEY_FILE` | если задан Radarr | ключ из Radarr Settings > General, значением или путём к файлу |
 | `SIDECAR_WEBHOOK_TOKEN` или `SIDECAR_WEBHOOK_TOKEN_FILE` | для сервера | случайная строка от 32 символов, например `openssl rand -hex 32` |
 | `SIDECAR_DRY_RUN` | нет, `true` | `false` включает запись в медиатеку |
 | `SIDECAR_DEFAULT_LANGUAGE` | нет, `und` | язык дорожек без языковой метки, например `en` или `ru` |
