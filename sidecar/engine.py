@@ -45,6 +45,12 @@ class Plan:
     actions: list[Action] = field(default_factory=list)
     notices: list[str] = field(default_factory=list)
     retire_owners: set[str] = field(default_factory=set)
+    # Context for readable logs: release folders, Sonarr videos, extra files seen,
+    # and where every planned destination comes from.
+    releases: list[str] = field(default_factory=list)
+    videos: list[str] = field(default_factory=list)
+    extras: int = 0
+    origins: dict[str, str] = field(default_factory=dict)
 
     def note(self, message: str):
         if message not in self.notices:
@@ -55,6 +61,10 @@ class Plan:
             "actions": [asdict(x) for x in self.actions],
             "notices": self.notices,
             "retire_owners": sorted(self.retire_owners),
+            "releases": self.releases,
+            "videos": self.videos,
+            "extras": self.extras,
+            "origins": self.origins,
         }
 
 
@@ -253,7 +263,10 @@ class Engine:
             root = self.config.release_root(source)
             if root not in releases:
                 releases[root] = self._scan(plan, root)
+                plan.releases.append(root.name)
+                plan.extras += len(releases[root].sidecars) + len(releases[root].fonts)
             release = releases[root]
+            plan.videos.append(target.name)
             if source.is_file():
                 source_video = source
             else:
@@ -338,6 +351,7 @@ class Engine:
             for path, suffix in self._names(tracks):
                 dest = target.with_name(target.stem + suffix)
                 self._add(plan, path, dest, owner, suffix, "sidecar")
+                plan.origins[str(dest)] = path.relative_to(root).as_posix()
             # Retire only after a replacement set is planned. Unmatched files are
             # expected in batches, so preserve old links on upgrades with notices.
             if tracks and not skipped:
@@ -438,6 +452,9 @@ class Engine:
                         plan, old, target.parent / "fonts" / old.name, owner, row["suffix"], "font"
                     )
                     continue
+                if target.name not in plan.videos:
+                    plan.videos.append(target.name)
+                plan.origins[str(target.with_name(target.stem + row["suffix"]))] = old.name
                 self._add(
                     plan,
                     old,
@@ -451,6 +468,7 @@ class Engine:
     def apply(self, plan: Plan) -> dict:
         report = plan.report()
         report["dry_run"] = self.config.dry_run
+        report.update(linked=[], unchanged=0, removed=[])
         if self.config.dry_run:
             return report
         wanted = {a.destination for a in plan.actions}
@@ -480,6 +498,7 @@ class Engine:
                     (str(dest), action.signature),
                 )
                 self.state.db.commit()
+                report["unchanged"] += 1
                 continue
             row = self.state.db.execute(
                 "SELECT * FROM links WHERE destination=?", (str(dest),)
@@ -504,6 +523,7 @@ class Engine:
                 "UPDATE links SET status='linked' WHERE destination=?", (str(dest),)
             )
             self.state.db.commit()
+            report["linked"].append(action.destination)
         for owner in plan.retire_owners:
             for row in self.state.links(owner):
                 if row["kind"] != "sidecar" or row["destination"] in wanted:
@@ -516,11 +536,89 @@ class Engine:
                 if removed:
                     self.state.db.execute("DELETE FROM links WHERE destination=?", (str(old),))
                     self.state.db.commit()
+                    report["removed"].append(str(old))
                 else:
                     report["notices"].append(f"Preserved modified destination: {old}")
         return report
 
-    def process(self, payload: dict) -> dict:
+    def process(self, payload: dict, label: str = "event") -> dict:
         result = self.apply(self.plan(payload))
-        LOG.info(json.dumps(result, ensure_ascii=False))
+        for line in summarize(payload, result, label):
+            LOG.info(line)
+        LOG.debug("%s report %s", label, json.dumps(result, ensure_ascii=False))
         return result
+
+
+def _episodes(payload: dict) -> str:
+    """S01E01, or S01E01-S01E13 for a batch; empty for events without episodes."""
+    numbers = sorted(
+        (e["seasonNumber"], e["episodeNumber"])
+        for e in payload.get("episodes") or []
+        if isinstance(e.get("seasonNumber"), int) and isinstance(e.get("episodeNumber"), int)
+    )
+    names = [f"S{season:02d}E{episode:02d}" for season, episode in numbers]
+    if len(names) > 2:
+        return f"{names[0]}-{names[-1]} ({len(names)} episodes)"
+    return ", ".join(names)
+
+
+def event_subject(payload: dict) -> str:
+    """'Download Black Lagoon S01E03' from a Sonarr webhook payload."""
+    series = payload.get("series") or {}
+    title = series.get("title") or f"series {series.get('id')}"
+    return " ".join(filter(None, [payload.get("eventType"), title, _episodes(payload)]))
+
+
+def _empty_reason(payload: dict, report: dict) -> str:
+    if payload.get("eventType") == "Rename":
+        return "no managed tracks to move"
+    if not report.get("releases"):
+        return "nothing to import"
+    if not report.get("extras"):
+        return "nothing to import, release has only video"
+    many = len(payload.get("episodes") or []) > 1
+    target = "these episodes" if many else "this episode"
+    return f"nothing to import, {report['extras']} extra files in release, none for {target}"
+
+
+def summarize(payload: dict, report: dict, label: str) -> list[str]:
+    """A summary line per job, then where from, where to, and each track.
+
+    Fonts are only counted: a release often carries dozens of them.
+    """
+    actions = report["actions"]
+    if report["dry_run"]:
+        done = {a["destination"] for a in actions}
+        verb = "would link"
+    else:
+        done = set(report["linked"])
+        verb = "linked"
+    sidecars = [a for a in actions if a["kind"] == "sidecar" and a["destination"] in done]
+    fonts = {a["source"] for a in actions if a["kind"] == "font" and a["destination"] in done}
+    parts = []
+    if sidecars or fonts:
+        parts.append(f"{verb} {len(sidecars)} tracks, {len(fonts)} fonts")
+    if report.get("unchanged"):
+        parts.append(f"{report['unchanged']} already in place")
+    if report.get("removed"):
+        parts.append(f"removed {len(report['removed'])} old tracks")
+    if report["notices"]:
+        parts.append(f"{len(report['notices'])} notices")
+    prefix = f"{label} [dry-run]" if report["dry_run"] else label
+    result = ", ".join(parts) or _empty_reason(payload, report)
+    lines = [f"{prefix} {event_subject(payload)}: {result}"]
+    if report.get("releases"):
+        lines.append(f"{label}   release: {', '.join(report['releases'])}")
+    videos = report.get("videos") or []
+    if sidecars or report.get("removed"):
+        shown = videos[0] if len(videos) == 1 else f"{len(videos)} files"
+        lines.append(f"{label}   video:   {shown}")
+    origins = report.get("origins") or {}
+    width = max((len(a["suffix"]) for a in sidecars), default=0)
+    for action in sidecars:
+        origin = origins.get(action["destination"], Path(action["source"]).name)
+        name = action["suffix"] if len(videos) == 1 else Path(action["destination"]).name
+        lines.append(f"{label}   + {name:<{width}} <- {origin}")
+    lines += [f"{label}   - {Path(d).name}" for d in report.get("removed", [])]
+    lines += [f"{label}   ! {n}" for n in report["notices"]]
+    return lines

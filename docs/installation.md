@@ -33,6 +33,7 @@
 | `SIDECAR_DRY_RUN` | нет, `true` | `false` включает запись в медиатеку |
 | `SIDECAR_DEFAULT_LANGUAGE` | нет, `und` | язык дорожек без языковой метки, например `en` или `ru` |
 | `SIDECAR_DATABASE` | нет | по умолчанию `/state/sidecar.sqlite3` |
+| `SIDECAR_LOG_LEVEL` | нет, `INFO` | `DEBUG` добавляет в лог полный JSON-отчёт по каждой задаче |
 | `SIDECAR_API_VERSION`, `SIDECAR_PORT`, `SIDECAR_MAX_FILES` | нет | `v3`, `8787`, `20000` |
 | `SIDECAR_CONFIG` | нет | путь к `config.toml`, по умолчанию `/config/config.toml`, если файл есть |
 

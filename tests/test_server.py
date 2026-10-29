@@ -105,3 +105,20 @@ def test_job_error_keeps_message_and_masks_url_credentials():
     assert error == "UnsafePath: Outside allowed roots: /mnt/media/x"
     masked = describe_error(URLError("http://user:secret@sonarr:8989/api refused"))
     assert "secret" not in masked and "***@sonarr" in masked
+
+
+def test_queued_event_is_logged_instead_of_http_status(tmp_path, caplog):
+    """The log says what was queued; the access log stays at DEBUG."""
+    import logging
+
+    with caplog.at_level(logging.INFO):
+        request(
+            tmp_path,
+            {"eventType": "Download", "series": {"id": 1, "title": "Kaiba"}, "episodes": []},
+        )
+        request(tmp_path, {"eventType": "Test"}, authorization="wrong")
+    messages = [r.getMessage() for r in caplog.records]
+    assert messages == [
+        "job=1 queued: Download Kaiba",
+        "webhook rejected: missing or wrong Authorization header",
+    ]

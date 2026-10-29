@@ -6,6 +6,7 @@ import fcntl
 from importlib.metadata import PackageNotFoundError, version
 import json
 import logging
+import os
 from pathlib import Path
 
 from .config import Config
@@ -42,7 +43,11 @@ def main():
     retry = sub.add_parser("retry")
     retry.add_argument("id", type=int)
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    # DEBUG adds the full JSON report of every job after its summary.
+    level = os.environ.get("SIDECAR_LOG_LEVEL", "INFO").upper()
+    if level not in {"DEBUG", "INFO", "WARNING", "ERROR"}:
+        parser.error("SIDECAR_LOG_LEVEL must be DEBUG, INFO, WARNING or ERROR")
+    logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(message)s")
     config = Config.load(args.config)
     if args.command == "event" and not args.apply:
         config.dry_run = True

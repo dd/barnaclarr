@@ -7,7 +7,7 @@ import logging
 import re
 import threading
 
-from .engine import Engine
+from .engine import Engine, event_subject
 from .sonarr import Sonarr
 from .state import State
 
@@ -25,8 +25,9 @@ def handler_class(config):
             self.connection.settimeout(10)
 
         def log_message(self, fmt, *args):
-            # Default logging includes URLs; do not log request headers or tokens.
-            LOG.info("http %s", args[1] if len(args) > 1 else "request")
+            # Access log, mostly health checks every 30 s. Meaningful events are
+            # logged below; never log request headers or tokens.
+            LOG.debug("http %s %s", self.path, args[1] if len(args) > 1 else "")
 
         def respond(self, status, data):
             body = json.dumps(data).encode()
@@ -48,20 +49,24 @@ def handler_class(config):
                 return
             supplied = self.headers.get("Authorization", "")
             if not hmac.compare_digest(supplied.encode(), ("Bearer " + token).encode()):
+                LOG.warning("webhook rejected: missing or wrong Authorization header")
                 self.respond(401, {"error": "unauthorized"})
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
                 if not 0 < length <= 1024 * 1024:
+                    LOG.warning("webhook rejected: body of %s bytes", length)
                     self.respond(413, {"error": "body must be between 1 byte and 1 MiB"})
                     return
                 payload = json.loads(self.rfile.read(length))
                 if not isinstance(payload, dict) or not isinstance(payload.get("eventType"), str):
                     raise ValueError("Invalid event")
                 if payload["eventType"] == "Test":
+                    LOG.info("webhook Test from Sonarr: ok")
                     self.respond(200, {"status": "ok"})
                     return
                 if payload["eventType"] not in {"Download", "Rename"}:
+                    LOG.info("webhook %s ignored", payload["eventType"])
                     self.respond(200, {"status": "ignored"})
                     return
                 if not isinstance(payload.get("series"), dict) or not isinstance(
@@ -73,8 +78,10 @@ def handler_class(config):
                     job_id = state.enqueue(payload)
                 finally:
                     state.close()
+                LOG.info("job=%s queued: %s", job_id, event_subject(payload))
                 self.respond(202, {"job_id": job_id})
             except (ValueError, KeyError, UnicodeDecodeError):
+                LOG.warning("webhook rejected: not a valid Sonarr event")
                 self.respond(400, {"error": "invalid JSON event"})
 
     return Handler
@@ -101,7 +108,7 @@ def worker(config, stop: threading.Event):
                 stop.wait(1)
                 continue
             try:
-                engine.process(json.loads(job["payload"]))
+                engine.process(json.loads(job["payload"]), f"job={job['id']}")
             except Exception as exc:
                 # This is the job isolation boundary: preserve failed work and retry.
                 error = describe_error(exc)

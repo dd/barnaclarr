@@ -147,10 +147,31 @@ srt, ass, ssa, sub, idx, mka, mp3, ac3, flac, m4a, aac
 
 Импортируй в тестовый сериал новую серию — дождись автоматической загрузки или сделай ручной импорт (см. [сценарии](#раздача-которую-sonarr-не-нашёл-сам)).
 
-В логах приложения (Apps → anime-sidecar → Logs) для каждой серии появится строка `INFO {"actions": [...], "notices": [...], "dry_run": true}`:
+В логах приложения (Apps → anime-sidecar → Logs) для каждого события Sonarr появится строка о постановке в очередь, а после обработки — итог, раздача, видео и список дорожек с указанием, откуда каждая взята:
 
-- `actions` — что будет создано: `source` (файл в раздаче) и `destination` (куда и под каким именем).
-- `notices` — что пропущено и почему.
+```
+job=12 queued: Download Black Lagoon S01E01
+job=12 [dry-run] Download Black Lagoon S01E01: would link 3 tracks, 0 fonts
+job=12   release: Black Lagoon
+job=12   video:   S01E01 - The Black Lagoon [Bluray-1080p].mp4
+job=12   + .AZAZELo.ru.mka      <- RuSound/AZAZELo/BLACK LAGOON 01.mka
+job=12   + .MC Ent.ru.mka       <- RuSound/MC Ent/BLACK LAGOON 01.mka
+job=12   + .Suzaku&SPAWN2.ru.mka <- RuSound/Suzaku&SPAWN2/BLACK LAGOON 01.mka
+job=13 queued: Download The Boondocks S01E01
+job=13 [dry-run] Download The Boondocks S01E01: nothing to import, release has only video
+job=13   release: The Boondocks (2005) Season 1 S01 (1080p HMAX WEB-DL x265 YOGI)
+```
+
+- `queued` — Sonarr прислал событие, задача поставлена в очередь под этим номером.
+- `release` — папка раздачи, в которой искались дорожки; `video` — файл серии в медиатеке, рядом с которым они появятся.
+- `+` — дорожка: суффикс к имени видео и путь исходного файла внутри раздачи. Шрифты только считаются, без списка.
+- `-` — старая дорожка, которую модуль уберёт (например, при замене на лучший релиз).
+- `!` — уведомление: что пропущено и почему.
+- `nothing to import` с причиной: в раздаче только видео, или дополнительные файлы есть, но ни один не подошёл к этой серии (тогда смотри уведомления `!`).
+- `already in place` — дорожки уже созданы раньше, повторять нечего.
+- `webhook rejected: …` — Sonarr прислал запрос, который модуль не принял (например, неверный токен).
+
+После включения записи вместо `[dry-run] … would link` будет `linked`. Проверки доступности (health-check) в лог не пишутся. Полный JSON-отчёт по каждой задаче можно включить переменной `SIDECAR_LOG_LEVEL: DEBUG`.
 
 Список последних задач:
 
