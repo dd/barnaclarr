@@ -90,6 +90,28 @@ docker build -t ghcr.io/dd/sidecarr-extras-import:dev .
 Версия задаётся только в `pyproject.toml`. Релиз: поднять версию, закоммитить и поставить тег `vX.Y.Z`; GitHub Actions проверит тесты и совпадение тега с версией и опубликует образ `ghcr.io/dd/sidecarr-extras-import:X.Y.Z`.
 
 
+## Roadmap
+
+### До релиза 0.1.0
+
+- [ ] CLI: `retry --failed` для всех упавших задач и повтор задач, выполненных в dry-run, без ручного SQL.
+- [ ] Автоочистка старых выполненных задач в `jobs`.
+- [ ] Предупреждение при запуске, если в `SIDECAR_DOWNLOAD_ROOTS` указана общая папка загрузок вместо отдельных категорий.
+- [ ] `SIDECAR_PATH_MAPPINGS`: подмена путей, если контейнер подключён не так, как Sonarr или Radarr.
+- [ ] Название проекта без «Anime»: модуль не привязан к аниме и работает с фильмами.
+- [ ] Проверка Radarr на живом экземпляре, тег `v0.1.0`.
+
+### После релиза
+
+- [ ] Обработка медиатеки, импортированной до установки модуля, по истории импорта Sonarr и Radarr.
+- [ ] Удаление созданных модулем дорожек и шрифтов, когда Sonarr или Radarr удаляет файл (On Episode File Delete, On Movie File Delete).
+- [ ] Обновление библиотеки Jellyfin после создания дорожек, без ручного сканирования.
+- [ ] Точная граница раздачи через qBittorrent по `downloadId` из события.
+- [ ] Импорт бонусов (NCOP, NCED, промо) в подпапки `extras/` и т.п. рядом с сериалом или фильмом.
+- [ ] Необязательный флаг `forced` для надписей.
+- [ ] Приложение в каталоге TrueNAS (community) и документация на английском.
+
+
 ## Sources
 
 Контракты сверены с [Sonarr API](https://sonarr.tv/docs/api/), [Sonarr Webhook payload construction](https://github.com/Sonarr/Sonarr/blob/v5-develop/src/NzbDrone.Core/Notifications/Webhook/WebhookBase.cs), [Radarr Webhook payload construction](https://github.com/Radarr/Radarr/blob/develop/src/NzbDrone.Core/Notifications/Webhook/WebhookBase.cs), [Radarr import history](https://github.com/Radarr/Radarr/blob/develop/src/NzbDrone.Core/History/HistoryService.cs), [Jellyfin external stream naming](https://github.com/jellyfin/jellyfin.org/blob/master/docs/general/server/media/_video-external-streams.md), [Jellyfin font configuration](https://jellyfin.org/docs/general/administration/configuration/#fonts) и [TrueNAS Custom Apps](https://apps.truenas.com/managing-apps/installing-custom-apps/).
