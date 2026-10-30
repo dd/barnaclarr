@@ -1,9 +1,9 @@
 name: Publish image
 # Tag vX.Y.Z (matching pyproject.toml) publishes :X.Y.Z, :X.Y and :latest.
-# Pushes to main/dev publish :main/:dev for testing; every build also gets :sha-<commit>.
+# Pushes to master/dev publish :master/:dev for testing; every build also gets :sha-<commit>.
 on:
   push:
-    branches: [main, dev]
+    branches: [master, dev]
     tags: ['v*.*.*']
   workflow_dispatch:
 

@@ -53,7 +53,7 @@
 | Тег | Когда обновляется |
 | --- | --- |
 | `0.1.0`, `0.1`, `latest` | git-тег `v0.1.0`, версия должна совпадать с `pyproject.toml` |
-| `dev`, `main` | каждый push в соответствующую ветку, для тестов |
+| `dev`, `master` | каждый push в соответствующую ветку, для тестов |
 | `sha-<commit>` | каждая сборка |
 
 Для постоянной установки указывайте конкретную версию, а не `latest` или `dev`. Если пакет в GHCR приватный, сделайте его публичным (GitHub > Packages > package settings) или добавьте учётные данные реестра в TrueNAS (Apps > Configuration > Manage Container Images / Docker Registries). Версию внутри контейнера показывает `barnaclarr --version`.
