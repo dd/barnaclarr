@@ -136,6 +136,21 @@ def test_directory_import_uses_radarr_history(tmp_path, key):
     assert sidecars(video) == {".AniDub.ru.mka", ".en.srt", ".Signs.ru.ass"}
 
 
+def test_single_file_torrent_has_nothing_to_import(tmp_path, caplog):
+    """A video straight in the category is a release of its own, not a failure."""
+    engine, api, release, video = setup(tmp_path, "Other release", ["Other.mkv", "Other.srt"])
+    loose = release.parent / "Akira.1988.1080p.BluRay.mkv"
+    loose.write_bytes(b"movie")
+    with caplog.at_level(logging.INFO, logger="sidecar.engine"):
+        report = engine.process(event(loose), "job=1")
+    assert sidecars(video) == set()
+    assert report["notices"] == []
+    assert [r.getMessage() for r in caplog.records][:2] == [
+        "job=1 Download Akira (1988): nothing to import, release has only video",
+        "job=1   release: Akira.1988.1080p.BluRay.mkv",
+    ]
+
+
 def test_sonarr_event_without_sonarr_configured_fails_clearly(tmp_path):
     engine, api, release, video = setup(tmp_path, "Akira (1988) [BDRip 1080p]", MOVIE)
     with pytest.raises(ValueError, match="BARNACLARR_SONARR_URL is not set"):

@@ -289,6 +289,13 @@ class Engine:
                 raise ValueError("No sourcePath; use On Import, or replay with explicit sourcePath")
             source = confined(Path(item.source), self.config.download_roots, exists=True)
             root = self.config.release_root(source)
+            if root is None:
+                # A single-file torrent: the video alone, nothing to link.
+                plan.releases.append(source.name)
+                plan.videos.append(target.name)
+                if self.state.links(owner):
+                    plan.note(f"Old sidecars retained for {owner}; review unmatched files")
+                continue
             if root not in releases:
                 releases[root] = self._scan(plan, root)
                 plan.releases.append(root.name)

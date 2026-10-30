@@ -144,10 +144,11 @@ class Config:
                 raise ValueError("Rule language must be an ISO language code")
         return config
 
-    def release_root(self, source: Path) -> Path:
+    def release_root(self, source: Path) -> Path | None:
         """Use the first child of a download root as the release boundary.
 
-        A loose file directly in a category cannot safely identify a release.
+        A loose file directly in a category is a single-file torrent: None, as it
+        has no tracks of its own and its neighbours belong to other releases.
         Configure category roots, never a common ancestor of several categories.
         """
         confined(source, self.download_roots, exists=True)
@@ -155,8 +156,10 @@ class Config:
             (r for r in self.download_roots if source.is_relative_to(r)), key=lambda r: len(r.parts)
         )
         relative = source.relative_to(root)
-        if not relative.parts or (len(relative.parts) < 2 and not source.is_dir()):
-            raise UnsafePath("Loose files require a dedicated release directory")
+        if not relative.parts:
+            raise UnsafePath(f"Not inside a release: {source}")
+        if len(relative.parts) == 1 and not source.is_dir():
+            return None
         return root / relative.parts[0]
 
 

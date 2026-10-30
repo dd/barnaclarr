@@ -343,7 +343,6 @@ sudo sh -c 'chown 568:568 /mnt/tank/apps/barnaclarr/config/*'
 | `PermissionError` | у UID 568 нет прав на запись в папку сериала или шрифтов |
 | `ValueError` (`Cross-filesystem hardlink forbidden`) или `OSError` (`EXDEV`) | загрузки и медиатека в разных datasets или подключены разными mount'ами, см. [storage.md](storage.md) |
 | `UnsafePath: Outside allowed roots` | раздача скачана в папку, которой нет в `BARNACLARR_DOWNLOAD_ROOTS` (другая категория торрент-клиента), или сериал лежит вне `BARNACLARR_LIBRARY_ROOTS` — добавь папку в нужную переменную |
-| `UnsafePath: Loose files require a dedicated release directory` | видео лежит прямо в папке категории, без своей папки раздачи |
 | `URLError` / `HTTPError` | модуль не достучался до Sonarr: проверь `BARNACLARR_SONARR_URL` и API-ключ |
 
 После исправления верни задачу в очередь:
