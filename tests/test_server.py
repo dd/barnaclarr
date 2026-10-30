@@ -118,6 +118,37 @@ def test_requeue_by_id_failed_and_dry_run(tmp_path):
     state.close()
 
 
+def test_jobs_list_names_app_and_event(tmp_path):
+    from sidecar.__main__ import list_jobs
+
+    state = State(tmp_path / "db")
+    state.enqueue(
+        {"eventType": "Download", "_app": "radarr", "movie": {"title": "Akira", "year": 1988}}
+    )
+    state.enqueue({"eventType": "Rename", "series": {"title": "Pluto"}})
+    assert list_jobs(state) == [
+        {
+            "id": 2,
+            "app": "sonarr",
+            "event": "Rename Pluto",
+            "status": "queued",
+            "attempts": 0,
+            "dry_run": 0,
+            "error": None,
+        },
+        {
+            "id": 1,
+            "app": "radarr",
+            "event": "Download Akira (1988)",
+            "status": "queued",
+            "attempts": 0,
+            "dry_run": 0,
+            "error": None,
+        },
+    ]
+    state.close()
+
+
 def test_job_error_keeps_message_and_masks_url_credentials():
     """Failed jobs say what went wrong without leaking URL credentials."""
     from urllib.error import URLError

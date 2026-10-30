@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 from .config import Config
-from .engine import Engine, event_app
+from .engine import Engine, event_app, event_subject
 from .server import serve
 from .sonarr import Radarr, Sonarr
 from .state import State
@@ -22,6 +22,21 @@ def installed_version() -> str:
         return version("barnaclarr")
     except PackageNotFoundError:
         return "unknown (not installed)"
+
+
+def list_jobs(state: State, limit: int = 100) -> list[dict]:
+    """Latest jobs first, each with its source app and event, as in the logs."""
+    jobs = []
+    for row in state.db.execute(
+        "SELECT id,status,attempts,dry_run,error,payload FROM jobs ORDER BY id DESC LIMIT ?",
+        (limit,),
+    ):
+        job = dict(row)
+        payload = json.loads(job.pop("payload"))
+        jobs.append(
+            {"id": job.pop("id"), "app": event_app(payload), "event": event_subject(payload), **job}
+        )
+    return jobs
 
 
 def main():
@@ -79,18 +94,7 @@ def main():
                 report = engine.process(payload, f"[{event_app(payload)}] event")
                 print(json.dumps(report, ensure_ascii=False, indent=2))
             elif args.command == "jobs":
-                print(
-                    json.dumps(
-                        [
-                            dict(row)
-                            for row in state.db.execute(
-                                "SELECT id,status,attempts,dry_run,error FROM jobs"
-                                " ORDER BY id DESC LIMIT 100"
-                            )
-                        ],
-                        indent=2,
-                    )
-                )
+                print(json.dumps(list_jobs(state), ensure_ascii=False, indent=2))
             elif args.command == "retry":
                 ids = state.requeue(args.ids, failed=args.failed, dry_run=args.dry_run)
                 print(f"queued {len(ids)} jobs: {' '.join(map(str, ids)) or '-'}")
