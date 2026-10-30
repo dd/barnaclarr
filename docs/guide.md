@@ -351,7 +351,7 @@ sudo sh -c 'chown 568:568 /mnt/tank/apps/barnaclarr/config/*'
 sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barnaclarr retry <id>
 ```
 
-Все упавшие задачи сразу: `barnaclarr retry --failed`.
+Список упавших задач: `barnaclarr jobs --status failed`, вернуть их все: `barnaclarr retry --failed`.
 
 **Уведомления в отчёте:**
 

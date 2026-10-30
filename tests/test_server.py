@@ -146,6 +146,13 @@ def test_jobs_list_names_app_and_event(tmp_path):
             "error": None,
         },
     ]
+    job = state.next_job()
+    job["attempts"] = 5
+    state.finish(job, "OSError")
+    assert [j["id"] for j in list_jobs(state, statuses=["queued"])] == [2]
+    assert [j["id"] for j in list_jobs(state, statuses=["queued", "failed"])] == [2, 1]
+    assert [j["id"] for j in list_jobs(state, app="radarr")] == [1]
+    assert [j["id"] for j in list_jobs(state, limit=1)] == [2]
     state.close()
 
 
