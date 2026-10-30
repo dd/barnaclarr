@@ -109,10 +109,12 @@ def test_requeue_by_id_failed_and_dry_run(tmp_path):
         state.finish(job, "OSError" if error == "failed" else None, dry_run=dry_run)
     assert state.requeue(failed=True) == [1]
     assert state.requeue(dry_run=True) == [2, 4]
-    assert state.requeue([3, 5]) == [3]  # 5 is still queued
+    assert state.requeue([3, 5]) == [3, 5]  # 5 waits for an attempt, now it runs at once
     assert state.requeue(dry_run=True) == []
     rows = state.db.execute("SELECT status,attempts,dry_run,error FROM jobs").fetchall()
     assert {tuple(row) for row in rows} == {("queued", 0, 0, None)}
+    state.next_job()
+    assert state.requeue([1]) == []  # a running job is left alone
     state.close()
 
 
