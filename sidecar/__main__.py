@@ -40,9 +40,15 @@ def main():
         "--apply", action="store_true", help="Apply only if config dry_run=false too"
     )
     sub.add_parser("jobs")
-    retry = sub.add_parser("retry")
-    retry.add_argument("id", type=int)
+    retry = sub.add_parser("retry", help="Queue finished jobs again")
+    retry.add_argument("ids", type=int, nargs="*", help="Job ids, failed or done")
+    retry.add_argument("--failed", action="store_true", help="All failed jobs")
+    retry.add_argument(
+        "--dry-run", action="store_true", help="All jobs that only planned in dry-run mode"
+    )
     args = parser.parse_args()
+    if args.command == "retry" and not (args.ids or args.failed or args.dry_run):
+        parser.error("retry needs job ids, --failed or --dry-run")
     # DEBUG adds the full JSON report of every job after its summary.
     level = os.environ.get("SIDECAR_LOG_LEVEL", "INFO").upper()
     if level not in {"DEBUG", "INFO", "WARNING", "ERROR"}:
@@ -78,18 +84,18 @@ def main():
                         [
                             dict(row)
                             for row in state.db.execute(
-                                "SELECT id,status,attempts,error FROM jobs ORDER BY id DESC LIMIT 100"
+                                "SELECT id,status,attempts,dry_run,error FROM jobs"
+                                " ORDER BY id DESC LIMIT 100"
                             )
                         ],
                         indent=2,
                     )
                 )
             elif args.command == "retry":
-                state.db.execute(
-                    "UPDATE jobs SET status='queued',attempts=0,next_attempt=0,error=NULL WHERE id=? AND status='failed'",
-                    (args.id,),
-                )
-                state.db.commit()
+                ids = state.requeue(args.ids, failed=args.failed, dry_run=args.dry_run)
+                print(f"queued {len(ids)} jobs: {' '.join(map(str, ids)) or '-'}")
+                if ids and config.dry_run:
+                    print("dry run is still on: the jobs will only plan again")
         finally:
             state.close()
 

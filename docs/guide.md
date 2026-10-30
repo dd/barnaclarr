@@ -208,10 +208,10 @@ sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barna
 
 Если план выглядит правильно: Apps → barnaclarr → Edit, поставь `SIDECAR_DRY_RUN: "false"` и сохрани.
 
-События, которые прошли в dry-run, сами не повторяются. Чтобы применить их, верни выполненные задачи в очередь:
+События, которые прошли в dry-run, сами не повторяются. Чтобы применить их, верни в очередь задачи, выполненные в dry-run:
 
 ```sh
-sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) python -c "import sqlite3; db = sqlite3.connect('/state/sidecar.sqlite3'); print(db.execute(\"UPDATE jobs SET status='queued', attempts=0, next_attempt=0 WHERE status='done'\").rowcount, 'requeued'); db.commit()"
+sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barnaclarr retry --dry-run
 ```
 
 Это безопасно: модуль не создаёт дубликаты и не трогает чужие файлы.
@@ -351,6 +351,8 @@ sudo sh -c 'chown 568:568 /mnt/tank/apps/barnaclarr/config/*'
 ```sh
 sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barnaclarr retry <id>
 ```
+
+Все упавшие задачи сразу: `barnaclarr retry --failed`.
 
 **Уведомления в отчёте:**
 

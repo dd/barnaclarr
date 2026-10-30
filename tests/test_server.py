@@ -97,6 +97,25 @@ def test_failed_job_retry_and_recovery(tmp_path):
     state.close()
 
 
+def test_requeue_by_id_failed_and_dry_run(tmp_path):
+    """Retry picks chosen ids, every failed job or every dry-run job, never live ones."""
+    state = State(tmp_path / "db")
+    for _ in range(5):
+        state.enqueue({"eventType": "Download"})
+    outcomes = [("failed", False), ("done", True), ("done", False), ("done", True)]
+    for error, dry_run in outcomes:
+        job = state.next_job()
+        job["attempts"] = 5
+        state.finish(job, "OSError" if error == "failed" else None, dry_run=dry_run)
+    assert state.requeue(failed=True) == [1]
+    assert state.requeue(dry_run=True) == [2, 4]
+    assert state.requeue([3, 5]) == [3]  # 5 is still queued
+    assert state.requeue(dry_run=True) == []
+    rows = state.db.execute("SELECT status,attempts,dry_run,error FROM jobs").fetchall()
+    assert {tuple(row) for row in rows} == {("queued", 0, 0, None)}
+    state.close()
+
+
 def test_job_error_keeps_message_and_masks_url_credentials():
     """Failed jobs say what went wrong without leaking URL credentials."""
     from urllib.error import URLError

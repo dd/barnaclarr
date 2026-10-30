@@ -27,6 +27,10 @@ class State:
                 signature TEXT PRIMARY KEY, digest TEXT, faces TEXT, error TEXT
             );
         """)
+        columns = {row["name"] for row in self.db.execute("PRAGMA table_info(jobs)")}
+        if "dry_run" not in columns:
+            # Marks jobs that only planned, so they can be replayed once writes are on.
+            self.db.execute("ALTER TABLE jobs ADD COLUMN dry_run INTEGER NOT NULL DEFAULT 0")
         self.db.commit()
 
     def close(self):
@@ -69,11 +73,36 @@ class State:
             return dict(row)
         return None
 
-    def finish(self, job: dict, error: str | None = None):
+    def finish(self, job: dict, error: str | None = None, dry_run: bool = False):
         attempts = job["attempts"] + 1
         status = "done" if error is None else ("failed" if attempts >= 6 else "queued")
         self.db.execute(
-            "UPDATE jobs SET status=?,error=?,next_attempt=? WHERE id=?",
-            (status, error, time.time() + min(900, 10 * 2**attempts), job["id"]),
+            "UPDATE jobs SET status=?,error=?,next_attempt=?,dry_run=? WHERE id=?",
+            (
+                status,
+                error,
+                time.time() + min(900, 10 * 2**attempts),
+                int(dry_run and error is None),
+                job["id"],
+            ),
         )
         self.db.commit()
+
+    def requeue(self, ids=(), failed: bool = False, dry_run: bool = False) -> list[int]:
+        """Queue finished jobs again: chosen ids, all failed, and/or all dry-run ones."""
+        found = {
+            row["id"]
+            for row in self.db.execute(
+                "SELECT id FROM jobs WHERE status IN ('done','failed')"
+                f" AND (id IN ({','.join('?' * len(ids))}) OR (? AND status='failed')"
+                " OR (? AND status='done' AND dry_run))",
+                (*ids, failed, dry_run),
+            )
+        }
+        self.db.executemany(
+            "UPDATE jobs SET status='queued',attempts=0,next_attempt=0,error=NULL,dry_run=0"
+            " WHERE id=?",
+            [(i,) for i in sorted(found)],
+        )
+        self.db.commit()
+        return sorted(found)

@@ -125,7 +125,7 @@ def worker(config, stop: threading.Event):
                 LOG.error("%s attempt=%s failed: %s", label, job["attempts"] + 1, error)
                 state.finish(job, error)
             else:
-                state.finish(job)
+                state.finish(job, dry_run=config.dry_run)
     finally:
         state.close()
 
