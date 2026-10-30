@@ -87,7 +87,7 @@ docker build -t ghcr.io/dd/barnaclarr:dev .
 
 ## Releases
 
-Версия задаётся только в `pyproject.toml`. Релиз: поднять версию, закоммитить и поставить тег `vX.Y.Z`; GitHub Actions проверит тесты и совпадение тега с версией и опубликует образ `ghcr.io/dd/barnaclarr:X.Y.Z`.
+Версия задаётся только в `pyproject.toml`. Каждый push в `dev` публикует тестовый образ `ghcr.io/dd/barnaclarr:dev`. Релиз: поднять версию в `dev`, слить `dev` в `master`; GitHub Actions проверит тесты, опубликует `ghcr.io/dd/barnaclarr:X.Y.Z`, `X.Y` и `latest`, поставит git-тег `vX.Y.Z` и создаст GitHub Release. Если версия уже выпущена, push в `master` ничего не публикует.
 
 
 ## Roadmap
