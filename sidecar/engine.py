@@ -469,7 +469,7 @@ class Engine:
 
     def _plan_series(self, plan: Plan, payload: dict, event: str):
         if self.sonarr is None:
-            raise ValueError("Sonarr event received, but SIDECAR_SONARR_URL is not set")
+            raise ValueError("Sonarr event received, but BARNACLARR_SONARR_URL is not set")
         series_id = int(payload["series"]["id"])
         series = self.sonarr.get(f"series/{series_id}")
         series_path = confined(Path(series["path"]), self.config.library_roots, exists=True)
@@ -488,7 +488,7 @@ class Engine:
 
     def _plan_movie(self, plan: Plan, payload: dict, event: str):
         if self.radarr is None:
-            raise ValueError("Radarr event received, but SIDECAR_RADARR_URL is not set")
+            raise ValueError("Radarr event received, but BARNACLARR_RADARR_URL is not set")
         movie_id = int(payload["movie"]["id"])
         movie = self.radarr.get(f"movie/{movie_id}")
         movie_path = confined(Path(movie["path"]), self.config.library_roots, exists=True)

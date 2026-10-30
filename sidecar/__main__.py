@@ -29,7 +29,7 @@ def main():
     parser.add_argument(
         "--config",
         type=Path,
-        help="Optional TOML file; default SIDECAR_CONFIG or /config/config.toml if present",
+        help="Optional TOML file; default BARNACLARR_CONFIG or /config/config.toml if present",
     )
     parser.add_argument("--version", action="version", version=installed_version())
     sub = parser.add_subparsers(dest="command", required=True)
@@ -50,9 +50,9 @@ def main():
     if args.command == "retry" and not (args.ids or args.failed or args.dry_run):
         parser.error("retry needs job ids, --failed or --dry-run")
     # DEBUG adds the full JSON report of every job after its summary.
-    level = os.environ.get("SIDECAR_LOG_LEVEL", "INFO").upper()
+    level = os.environ.get("BARNACLARR_LOG_LEVEL", "INFO").upper()
     if level not in {"DEBUG", "INFO", "WARNING", "ERROR"}:
-        parser.error("SIDECAR_LOG_LEVEL must be DEBUG, INFO, WARNING or ERROR")
+        parser.error("BARNACLARR_LOG_LEVEL must be DEBUG, INFO, WARNING or ERROR")
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(message)s")
     config = Config.load(args.config)
     if args.command == "event" and not args.apply:

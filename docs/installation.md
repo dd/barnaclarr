@@ -1,6 +1,6 @@
 # TrueNAS installation
 
-Все пути, адреса и порты ниже — примеры. Свои значения задаются переменными окружения `SIDECAR_*`: в `deploy/.env` (Compose) или в разделе `environment` файла `deploy/truenas-custom-app.yaml` (Install via YAML). Необязательный `config.toml` нужен только для `rules` и `mappings`. Требования к datasets описаны в [storage.md](storage.md).
+Все пути, адреса и порты ниже — примеры. Свои значения задаются переменными окружения `BARNACLARR_*`: в `deploy/.env` (Compose) или в разделе `environment` файла `deploy/truenas-custom-app.yaml` (Install via YAML). Необязательный `config.toml` нужен только для `rules` и `mappings`. Требования к datasets описаны в [storage.md](storage.md).
 
 
 ## Storage preparation
@@ -24,20 +24,20 @@
 
 | Переменная | Обязательна | Значение |
 | --- | --- | --- |
-| `SIDECAR_DOWNLOAD_ROOTS` | да | папки категорий загрузок, например `/mnt/media/downloads/anime` |
-| `SIDECAR_LIBRARY_ROOTS` | да | корневые папки Sonarr, куда можно класть дорожки |
-| `SIDECAR_FONT_ROOT` | да | общая библиотека шрифтов внутри того же dataset |
-| `SIDECAR_SONARR_URL` | Sonarr и/или Radarr | адрес Sonarr из контейнера: LAN IP NAS или `host.docker.internal`, с портом |
-| `SIDECAR_SONARR_API_KEY` или `SIDECAR_SONARR_API_KEY_FILE` | если задан Sonarr | ключ из Sonarr Settings > General, значением или путём к файлу |
-| `SIDECAR_RADARR_URL` | Sonarr и/или Radarr | адрес Radarr из контейнера, вебхук Radarr — `/webhook/radarr` |
-| `SIDECAR_RADARR_API_KEY` или `SIDECAR_RADARR_API_KEY_FILE` | если задан Radarr | ключ из Radarr Settings > General, значением или путём к файлу |
-| `SIDECAR_WEBHOOK_TOKEN` или `SIDECAR_WEBHOOK_TOKEN_FILE` | для сервера | случайная строка от 32 символов, например `openssl rand -hex 32` |
-| `SIDECAR_DRY_RUN` | нет, `true` | `false` включает запись в медиатеку |
-| `SIDECAR_DEFAULT_LANGUAGE` | нет, `und` | язык дорожек без языковой метки, например `en` или `ru` |
-| `SIDECAR_DATABASE` | нет | по умолчанию `/state/sidecar.sqlite3` |
-| `SIDECAR_LOG_LEVEL` | нет, `INFO` | `DEBUG` добавляет в лог полный JSON-отчёт по каждой задаче |
-| `SIDECAR_API_VERSION`, `SIDECAR_PORT`, `SIDECAR_MAX_FILES` | нет | `v3`, `8787`, `20000` |
-| `SIDECAR_CONFIG` | нет | путь к `config.toml`, по умолчанию `/config/config.toml`, если файл есть |
+| `BARNACLARR_DOWNLOAD_ROOTS` | да | папки категорий загрузок, например `/mnt/media/downloads/anime` |
+| `BARNACLARR_LIBRARY_ROOTS` | да | корневые папки Sonarr, куда можно класть дорожки |
+| `BARNACLARR_FONT_ROOT` | да | общая библиотека шрифтов внутри того же dataset |
+| `BARNACLARR_SONARR_URL` | Sonarr и/или Radarr | адрес Sonarr из контейнера: LAN IP NAS или `host.docker.internal`, с портом |
+| `BARNACLARR_SONARR_API_KEY` или `BARNACLARR_SONARR_API_KEY_FILE` | если задан Sonarr | ключ из Sonarr Settings > General, значением или путём к файлу |
+| `BARNACLARR_RADARR_URL` | Sonarr и/или Radarr | адрес Radarr из контейнера, вебхук Radarr — `/webhook/radarr` |
+| `BARNACLARR_RADARR_API_KEY` или `BARNACLARR_RADARR_API_KEY_FILE` | если задан Radarr | ключ из Radarr Settings > General, значением или путём к файлу |
+| `BARNACLARR_WEBHOOK_TOKEN` или `BARNACLARR_WEBHOOK_TOKEN_FILE` | для сервера | случайная строка от 32 символов, например `openssl rand -hex 32` |
+| `BARNACLARR_DRY_RUN` | нет, `true` | `false` включает запись в медиатеку |
+| `BARNACLARR_DEFAULT_LANGUAGE` | нет, `und` | язык дорожек без языковой метки, например `en` или `ru` |
+| `BARNACLARR_DATABASE` | нет | по умолчанию `/state/sidecar.sqlite3` |
+| `BARNACLARR_LOG_LEVEL` | нет, `INFO` | `DEBUG` добавляет в лог полный JSON-отчёт по каждой задаче |
+| `BARNACLARR_API_VERSION`, `BARNACLARR_PORT`, `BARNACLARR_MAX_FILES` | нет | `v3`, `8787`, `20000` |
+| `BARNACLARR_CONFIG` | нет | путь к `config.toml`, по умолчанию `/config/config.toml`, если файл есть |
 
 `config.toml` ([пример](../deploy/config.example.toml)) кладётся в каталог, подключённый как `/config`, и содержит `rules` и `mappings`. В нём можно задать и все остальные настройки — это удобно для обычного Docker без переменных.
 
@@ -82,7 +82,7 @@ docker compose -f deploy/compose.yaml up -d
 1. Sonarr > Settings > Connect > Webhook.
 2. URL: `http://<адрес NAS>:<WEBHOOK_PORT>/webhook/sonarr`. Адрес должен быть доступен из контейнера Sonarr: LAN IP NAS или адрес шлюза Docker-сети, через который Sonarr уже обращается к другим приложениям. Проверьте кнопкой Test.
 3. Method: POST.
-4. Advanced Headers: ключ `Authorization`, значение `Bearer <SIDECAR_WEBHOOK_TOKEN>`. Поля Username/Password оставьте пустыми.
+4. Advanced Headers: ключ `Authorization`, значение `Bearer <BARNACLARR_WEBHOOK_TOKEN>`. Поля Username/Password оставьте пустыми.
 5. Включить события On Import / On Upgrade / On Rename. Основной вариант — уведомление для каждого импортированного файла с `episodeFile.sourcePath`. Поддерживается также Import Complete с `episodeFiles` и общим `sourcePath`: исходные файлы тогда берутся из истории импорта Sonarr.
 6. Для первой проверки ограничить connection тегом одного сериала. Приложение пишет только внутри `library_roots`.
 7. Нажать Test. HTTP 200 подтверждает доступность и token, но не проверяет сопоставление медиа и Sonarr API. HTTP 202 на рабочем событии означает постановку в очередь, а не успешное завершение импорта.
@@ -92,7 +92,7 @@ docker compose -f deploy/compose.yaml up -d
 
 ## Dry run and enabling writes
 
-Сначала оставить `SIDECAR_DRY_RUN=true`. Для ручной проверки подготовьте JSON события с фактическими Sonarr series ID, episodeFile ID и оригинальным sourcePath. Номера берутся из Sonarr API, не из имени видео:
+Сначала оставить `BARNACLARR_DRY_RUN=true`. Для ручной проверки подготовьте JSON события с фактическими Sonarr series ID, episodeFile ID и оригинальным sourcePath. Номера берутся из Sonarr API, не из имени видео:
 
 ```json
 {
@@ -111,9 +111,9 @@ docker compose -f deploy/compose.yaml up -d
 sudo docker compose -f deploy/compose.yaml run --rm --no-deps barnaclarr event /config/event.json
 ```
 
-CLI `event` всегда dry-run, если не указан `--apply`; `--apply` также не отменяет `SIDECAR_DRY_RUN=true`. В отчёте проверьте sources/destinations, язык/группу, пропуски OVA и конфликты шрифтов. Dry-run не создаёт директории медиатеки, но может создать служебную SQLite и lock.
+CLI `event` всегда dry-run, если не указан `--apply`; `--apply` также не отменяет `BARNACLARR_DRY_RUN=true`. В отчёте проверьте sources/destinations, язык/группу, пропуски OVA и конфликты шрифтов. Dry-run не создаёт директории медиатеки, но может создать служебную SQLite и lock.
 
-После проверки конфликтов установить `SIDECAR_DRY_RUN=false`, переразвернуть barnaclarr и повторно подать событие либо запустить `event /config/event.json --apply`. События, уже завершённые в dry-run, **не выполняются повторно автоматически**. Это предотвращает неожиданный массовый импорт при смене режима.
+После проверки конфликтов установить `BARNACLARR_DRY_RUN=false`, переразвернуть barnaclarr и повторно подать событие либо запустить `event /config/event.json --apply`. События, уже завершённые в dry-run, **не выполняются повторно автоматически**. Это предотвращает неожиданный массовый импорт при смене режима.
 
 Проверить `stat` у созданной ссылки и исходника: одинаковые device/inode, link count >= 2. Jellyfin может потребовать Scan Media Library для обнаружения новых внешних дорожек.
 

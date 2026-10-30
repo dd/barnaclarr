@@ -138,7 +138,7 @@ def test_directory_import_uses_radarr_history(tmp_path, key):
 
 def test_sonarr_event_without_sonarr_configured_fails_clearly(tmp_path):
     engine, api, release, video = setup(tmp_path, "Akira (1988) [BDRip 1080p]", MOVIE)
-    with pytest.raises(ValueError, match="SIDECAR_SONARR_URL is not set"):
+    with pytest.raises(ValueError, match="BARNACLARR_SONARR_URL is not set"):
         engine.process({"eventType": "Download", "series": {"id": 1}, "episodeFile": {"id": 1}})
 
 
@@ -163,14 +163,14 @@ def test_radarr_webhook_is_queued_as_radarr(tmp_path, caplog):
 def test_radarr_only_configuration(tmp_path, monkeypatch):
     monkeypatch.setattr("sidecar.config.DEFAULT_CONFIG", tmp_path / "missing.toml")
     env = {
-        "SIDECAR_CONFIG": "",
-        "SIDECAR_DOWNLOAD_ROOTS": "/mnt/media/downloads/radarr",
-        "SIDECAR_LIBRARY_ROOTS": "/mnt/media/Movies",
-        "SIDECAR_FONT_ROOT": "/mnt/media/.fonts",
-        "SIDECAR_RADARR_URL": "http://radarr:7878",
-        "SIDECAR_RADARR_API_KEY": "r4darr-key",
+        "BARNACLARR_CONFIG": "",
+        "BARNACLARR_DOWNLOAD_ROOTS": "/mnt/media/downloads/radarr",
+        "BARNACLARR_LIBRARY_ROOTS": "/mnt/media/Movies",
+        "BARNACLARR_FONT_ROOT": "/mnt/media/.fonts",
+        "BARNACLARR_RADARR_URL": "http://radarr:7878",
+        "BARNACLARR_RADARR_API_KEY": "r4darr-key",
     }
     config = Config.load(environ=env)
     assert (config.sonarr_url, config.radarr_key()) == ("", "r4darr-key")
-    with pytest.raises(ValueError, match="SIDECAR_SONARR_URL and/or SIDECAR_RADARR_URL"):
-        Config.load(environ={**env, "SIDECAR_RADARR_URL": ""})
+    with pytest.raises(ValueError, match="BARNACLARR_SONARR_URL and/or BARNACLARR_RADARR_URL"):
+        Config.load(environ={**env, "BARNACLARR_RADARR_URL": ""})

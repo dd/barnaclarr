@@ -1,23 +1,23 @@
 # Optional config file: <config dir>/config.toml, mounted at /config/config.toml.
-# Normal settings come from SIDECAR_* environment variables (see truenas-custom-app.yaml);
+# Normal settings come from BARNACLARR_* environment variables (see truenas-custom-app.yaml);
 # a variable always wins over the same key here. This file is needed only for rules
 # and mappings, which are too structured for environment variables.
 #
 # Every setting can also live here instead, e.g. for plain Docker without variables:
-# download_roots = ["/mnt/media/downloads/anime"]     # SIDECAR_DOWNLOAD_ROOTS
-# library_roots = ["/mnt/media/anime"]                # SIDECAR_LIBRARY_ROOTS
-# font_root = "/mnt/media/.barnaclarr-fonts"          # SIDECAR_FONT_ROOT
-# database = "/state/sidecar.sqlite3"                 # SIDECAR_DATABASE
-# sonarr_url = "http://host.docker.internal:8989"     # SIDECAR_SONARR_URL
-# api_key_file = "/config/sonarr-api-key"             # SIDECAR_SONARR_API_KEY(_FILE)
-# radarr_url = "http://host.docker.internal:7878"     # SIDECAR_RADARR_URL
-# radarr_api_key_file = "/config/radarr-api-key"      # SIDECAR_RADARR_API_KEY(_FILE)
-# webhook_token_file = "/config/webhook-token"        # SIDECAR_WEBHOOK_TOKEN(_FILE)
-# api_version = "v3"                                  # SIDECAR_API_VERSION
-# dry_run = true                                      # SIDECAR_DRY_RUN
-# port = 8787                                         # SIDECAR_PORT
-# max_files = 20000                                   # SIDECAR_MAX_FILES
-# default_language = "und"                            # SIDECAR_DEFAULT_LANGUAGE
+# download_roots = ["/mnt/media/downloads/anime"]     # BARNACLARR_DOWNLOAD_ROOTS
+# library_roots = ["/mnt/media/anime"]                # BARNACLARR_LIBRARY_ROOTS
+# font_root = "/mnt/media/.barnaclarr-fonts"          # BARNACLARR_FONT_ROOT
+# database = "/state/sidecar.sqlite3"                 # BARNACLARR_DATABASE
+# sonarr_url = "http://host.docker.internal:8989"     # BARNACLARR_SONARR_URL
+# api_key_file = "/config/sonarr-api-key"             # BARNACLARR_SONARR_API_KEY(_FILE)
+# radarr_url = "http://host.docker.internal:7878"     # BARNACLARR_RADARR_URL
+# radarr_api_key_file = "/config/radarr-api-key"      # BARNACLARR_RADARR_API_KEY(_FILE)
+# webhook_token_file = "/config/webhook-token"        # BARNACLARR_WEBHOOK_TOKEN(_FILE)
+# api_version = "v3"                                  # BARNACLARR_API_VERSION
+# dry_run = true                                      # BARNACLARR_DRY_RUN
+# port = 8787                                         # BARNACLARR_PORT
+# max_files = 20000                                   # BARNACLARR_MAX_FILES
+# default_language = "und"                            # BARNACLARR_DEFAULT_LANGUAGE
 
 # Rules match the release-relative path; later rules override earlier ones.
 # Language and group are normally taken from the folder names ("ENG Subs/Commie",

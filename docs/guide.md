@@ -46,7 +46,7 @@ Cells at Work! (2018)/Season 01/
     └── ...
 ```
 
-В Jellyfin в меню аудио появятся «AniLibria — Russian» и «StudioBand — Russian», в субтитрах — «laci», «laci Signs» и так далее (язык здесь взят из `SIDECAR_DEFAULT_LANGUAGE`, потому что в папках раздачи он не указан). Шрифты дополнительно попадают в общую папку `.barnaclarr-fonts`, которую можно подключить к Jellyfin.
+В Jellyfin в меню аудио появятся «AniLibria — Russian» и «StudioBand — Russian», в субтитрах — «laci», «laci Signs» и так далее (язык здесь взят из `BARNACLARR_DEFAULT_LANGUAGE`, потому что в папках раздачи он не указан). Шрифты дополнительно попадают в общую папку `.barnaclarr-fonts`, которую можно подключить к Jellyfin.
 
 Модуль ничего не скачивает, не переименовывает видео и не меняет файлы раздачи.
 
@@ -91,15 +91,15 @@ Apps → Discover Apps → ⋮ → **Install via YAML**. Имя приложен
 | --- | --- | --- |
 | `/mnt/tank/media` в `volumes` | `/mnt/tank/media` | твой dataset, внутри контейнера он будет `/mnt/media` |
 | `/mnt/tank/apps/barnaclarr/state` | | папка из шага 1 |
-| `SIDECAR_DOWNLOAD_ROOTS` | `/mnt/media/downloads/anime` | папки категорий торрент-клиента, через запятую; путь внутри контейнера |
-| `SIDECAR_LIBRARY_ROOTS` | `/mnt/media/anime` | корневые папки сериалов в Sonarr, через запятую |
-| `SIDECAR_SONARR_URL` | `http://host.docker.internal:8989` | порт, на котором приложение Sonarr опубликовано в TrueNAS (8989 у Sonarr по умолчанию); если не подключается — LAN IP NAS |
-| `SIDECAR_SONARR_API_KEY` | | Sonarr → Settings → General → API Key |
-| `SIDECAR_WEBHOOK_TOKEN` | | строка из шага 2 |
-| `SIDECAR_DEFAULT_LANGUAGE` | `en`, `ru`, `de`… | язык дорожек, у которых в папках раздачи не указан язык; по умолчанию `und` (не определён) |
+| `BARNACLARR_DOWNLOAD_ROOTS` | `/mnt/media/downloads/anime` | папки категорий торрент-клиента, через запятую; путь внутри контейнера |
+| `BARNACLARR_LIBRARY_ROOTS` | `/mnt/media/anime` | корневые папки сериалов в Sonarr, через запятую |
+| `BARNACLARR_SONARR_URL` | `http://host.docker.internal:8989` | порт, на котором приложение Sonarr опубликовано в TrueNAS (8989 у Sonarr по умолчанию); если не подключается — LAN IP NAS |
+| `BARNACLARR_SONARR_API_KEY` | | Sonarr → Settings → General → API Key |
+| `BARNACLARR_WEBHOOK_TOKEN` | | строка из шага 2 |
+| `BARNACLARR_DEFAULT_LANGUAGE` | `en`, `ru`, `de`… | язык дорожек, у которых в папках раздачи не указан язык; по умолчанию `und` (не определён) |
 | `TZ` | `Europe/Berlin` | часовой пояс для времени в логах |
 
-`SIDECAR_DRY_RUN` оставь `"true"`: в этом режиме модуль только пишет в лог, что сделал бы, и ничего не создаёт.
+`BARNACLARR_DRY_RUN` оставь `"true"`: в этом режиме модуль только пишет в лог, что сделал бы, и ничего не создаёт.
 
 Все переменные описаны в разделе [Configuration](installation.md#configuration).
 
@@ -138,7 +138,7 @@ Settings → Media Management → Import Extra Files. Если Sonarr тоже �
 srt, ass, ssa, sub, idx, mka, mp3, ac3, flac, m4a, aac
 ```
 
-Оставь, например, `nfo, jpg, jpeg, png`. Список общий для всех сериалов: если дорожки нужны и обычным сериалам, добавь их корневые папки в `SIDECAR_LIBRARY_ROOTS`, а папки их загрузок — в `SIDECAR_DOWNLOAD_ROOTS`.
+Оставь, например, `nfo, jpg, jpeg, png`. Список общий для всех сериалов: если дорожки нужны и обычным сериалам, добавь их корневые папки в `BARNACLARR_LIBRARY_ROOTS`, а папки их загрузок — в `BARNACLARR_DOWNLOAD_ROOTS`.
 
 
 ## Настройка Radarr
@@ -148,10 +148,10 @@ srt, ass, ssa, sub, idx, mka, mp3, ac3, flac, m4a, aac
 1. **Настройки модуля:** добавь в `environment` адрес и ключ Radarr, а в списки папок — категорию загрузок Radarr и корневую папку фильмов:
 
    ```yaml
-   SIDECAR_RADARR_URL: http://host.docker.internal:7878
-   SIDECAR_RADARR_API_KEY: <Radarr Settings > General > API Key>
-   SIDECAR_DOWNLOAD_ROOTS: /mnt/media/downloads/anime,/mnt/media/downloads/radarr
-   SIDECAR_LIBRARY_ROOTS: /mnt/media/anime,/mnt/media/movies
+   BARNACLARR_RADARR_URL: http://host.docker.internal:7878
+   BARNACLARR_RADARR_API_KEY: <Radarr Settings > General > API Key>
+   BARNACLARR_DOWNLOAD_ROOTS: /mnt/media/downloads/anime,/mnt/media/downloads/radarr
+   BARNACLARR_LIBRARY_ROOTS: /mnt/media/anime,/mnt/media/movies
    ```
 
    Переразверни приложение.
@@ -194,7 +194,7 @@ srt, ass, ssa, sub, idx, mka, mp3, ac3, flac, m4a, aac
 - `already in place` — дорожки уже созданы раньше, повторять нечего.
 - `webhook rejected: …` — Sonarr или Radarr прислал запрос, который модуль не принял (например, неверный токен).
 
-После включения записи вместо `[dry-run] … would link` будет `linked`. Проверки доступности (health-check) в лог не пишутся. Полный JSON-отчёт по каждой задаче можно включить переменной `SIDECAR_LOG_LEVEL: DEBUG`.
+После включения записи вместо `[dry-run] … would link` будет `linked`. Проверки доступности (health-check) в лог не пишутся. Полный JSON-отчёт по каждой задаче можно включить переменной `BARNACLARR_LOG_LEVEL: DEBUG`.
 
 Список последних задач:
 
@@ -206,7 +206,7 @@ sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barna
 
 ### 2. Включение записи
 
-Если план выглядит правильно: Apps → barnaclarr → Edit, поставь `SIDECAR_DRY_RUN: "false"` и сохрани.
+Если план выглядит правильно: Apps → barnaclarr → Edit, поставь `BARNACLARR_DRY_RUN: "false"` и сохрани.
 
 События, которые прошли в dry-run, сами не повторяются. Чтобы применить их, верни в очередь задачи, выполненные в dry-run:
 
@@ -246,14 +246,14 @@ sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barna
 | `RuSound/Suzaku&SPAWN2/…mka` | `.Suzaku&SPAWN2.ru.mka` (слитные `RuSound`, `EngSubs` тоже понимаются) |
 | `[Subtitle]/AleX_MytH & Hollow/…ass` | `.AleX_MytH & Hollow.<язык>.ass` |
 | `Subs/GJM/Signs & Songs/…ass` | `.GJM Signs.<язык>.ass` |
-| `Sound/AniLibria/…mka` | `.AniLibria.<язык>.mka` (язык из `SIDECAR_DEFAULT_LANGUAGE`) |
+| `Sound/AniLibria/…mka` | `.AniLibria.<язык>.mka` (язык из `BARNACLARR_DEFAULT_LANGUAGE`) |
 | `RUS Sound/JAM Club/…mka` | `.JAM Club.ru.mka` |
 | `RUS Sound [Студийная банда]/…mka` | `.Студийная банда.ru.mka` |
 | `Russian Subtitles [Reanimedia]/Full [ass]/…ass` | `.Reanimedia.ru.ass` |
 | `Subs/SovetRomantica/Надписи/…ass` | `.SovetRomantica Signs.<язык>.ass` |
 | `RUS Subs/…ass` | `.ru.ass` |
 
-Надписи распознаются по словам `Signs`, `Inscriptions`, `Надписи`. `<язык>` — значение `SIDECAR_DEFAULT_LANGUAGE`, если в пути язык не указан.
+Надписи распознаются по словам `Signs`, `Inscriptions`, `Надписи`. `<язык>` — значение `BARNACLARR_DEFAULT_LANGUAGE`, если в пути язык не указан.
 
 Папки бонусов (`Extras`, `Special`, `SPs`, `Omake`, `BD menu`, `Scan`, `BDCG`, `NCOP`, `OST`...) пропускаются. Если у двух дорожек получилось одинаковое имя, ко второй добавляется номер.
 
@@ -270,7 +270,7 @@ Sonarr сам находит раздачу, скачивает и импорт�
 
 Sonarr ищет по названиям из своих баз, поэтому раздачи, где сериал назван иначе — локализованным названием, на другом языке или с другим годом, — часто не находит. Тогда:
 
-1. **Prowlarr:** найди раздачу вручную и нажми Grab. Отправь её в категорию торрент-клиента, папка которой есть в `SIDECAR_DOWNLOAD_ROOTS`, иначе модуль её не увидит.
+1. **Prowlarr:** найди раздачу вручную и нажми Grab. Отправь её в категорию торрент-клиента, папка которой есть в `BARNACLARR_DOWNLOAD_ROOTS`, иначе модуль её не увидит.
 2. **Sonarr:** когда раздача скачалась, нажми Manual Import на странице сериала или в Wanted → Missing (либо открой её в Activity → Queue, если она появилась в очереди), укажи папку раздачи, проверь, что серии сопоставились с нужными эпизодами, и импортируй.
 3. Sonarr отправит тот же вебхук, что и при автоматическом импорте, и модуль подтянет дорожки.
 
@@ -321,11 +321,11 @@ language = "ja"
 
 ## Частые проблемы
 
-**Sonarr: `401 Unauthorized` при Test.** Модуль доступен, но заголовок не совпал. Проверь, что в Headers ключ `Authorization`, значение `Bearer <токен>` через один пробел, токен совпадает с `SIDECAR_WEBHOOK_TOKEN`, а Username и Password пустые.
+**Sonarr: `401 Unauthorized` при Test.** Модуль доступен, но заголовок не совпал. Проверь, что в Headers ключ `Authorization`, значение `Bearer <токен>` через один пробел, токен совпадает с `BARNACLARR_WEBHOOK_TOKEN`, а Username и Password пустые.
 
 **Sonarr: не может подключиться при Test.** Адрес недоступен из контейнера Sonarr. Попробуй LAN IP NAS вместо `172.16.x.x` или наоборот; проверь, что порт 8787 опубликован в YAML.
 
-**Приложение не стартует.** Открой логи: сообщение называет проблему, например `library_roots is required (SIDECAR_LIBRARY_ROOTS or config.toml)` или `Webhook token must contain at least 32 characters`.
+**Приложение не стартует.** Открой логи: сообщение называет проблему, например `library_roots is required (BARNACLARR_LIBRARY_ROOTS or config.toml)` или `Webhook token must contain at least 32 characters`.
 
 **`PermissionError` / `Permission denied`.** Файлы и папки модуля должны принадлежать UID 568. Если секреты или `config.toml` лежат в файлах, исправь владельца изнутри root-shell, чтобы раскрылась маска:
 
@@ -342,9 +342,9 @@ sudo sh -c 'chown 568:568 /mnt/tank/apps/barnaclarr/config/*'
 | `FileExistsError` | на месте дорожки уже лежит чужой файл — чаще всего его создал Sonarr через Import Extra Files; убери расширения из списка и удали дубликат |
 | `PermissionError` | у UID 568 нет прав на запись в папку сериала или шрифтов |
 | `ValueError` (`Cross-filesystem hardlink forbidden`) или `OSError` (`EXDEV`) | загрузки и медиатека в разных datasets или подключены разными mount'ами, см. [storage.md](storage.md) |
-| `UnsafePath: Outside allowed roots` | раздача скачана в папку, которой нет в `SIDECAR_DOWNLOAD_ROOTS` (другая категория торрент-клиента), или сериал лежит вне `SIDECAR_LIBRARY_ROOTS` — добавь папку в нужную переменную |
+| `UnsafePath: Outside allowed roots` | раздача скачана в папку, которой нет в `BARNACLARR_DOWNLOAD_ROOTS` (другая категория торрент-клиента), или сериал лежит вне `BARNACLARR_LIBRARY_ROOTS` — добавь папку в нужную переменную |
 | `UnsafePath: Loose files require a dedicated release directory` | видео лежит прямо в папке категории, без своей папки раздачи |
-| `URLError` / `HTTPError` | модуль не достучался до Sonarr: проверь `SIDECAR_SONARR_URL` и API-ключ |
+| `URLError` / `HTTPError` | модуль не достучался до Sonarr: проверь `BARNACLARR_SONARR_URL` и API-ключ |
 
 После исправления верни задачу в очередь:
 
@@ -364,6 +364,6 @@ sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barna
 | `Invalid font` | файл шрифта повреждён и пропущен |
 | `Old sidecars retained` | новый релиз сопоставился не полностью, старые дорожки оставлены — проверь вручную |
 
-**Язык дорожки `und`.** В папках раздачи нет языковой метки, и не задан `SIDECAR_DEFAULT_LANGUAGE`.
+**Язык дорожки `und`.** В папках раздачи нет языковой метки, и не задан `BARNACLARR_DEFAULT_LANGUAGE`.
 
 **Jellyfin не показывает дорожки.** Запусти сканирование библиотеки. Проверь, что имя дорожки начинается ровно с имени видео (`S01E01 - … .mkv` → `S01E01 - … .AniLibria.ru.mka`).

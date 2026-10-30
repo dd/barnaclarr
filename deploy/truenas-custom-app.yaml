@@ -20,20 +20,20 @@ services:
     environment:
       TZ: UTC
       # Paths as seen inside the container (the media dataset is /mnt/media).
-      SIDECAR_DOWNLOAD_ROOTS: /mnt/media/downloads/anime
-      SIDECAR_LIBRARY_ROOTS: /mnt/media/anime
-      SIDECAR_FONT_ROOT: /mnt/media/.barnaclarr-fonts
+      BARNACLARR_DOWNLOAD_ROOTS: /mnt/media/downloads/anime
+      BARNACLARR_LIBRARY_ROOTS: /mnt/media/anime
+      BARNACLARR_FONT_ROOT: /mnt/media/.barnaclarr-fonts
       # Sonarr as reachable from this container: NAS LAN IP or host.docker.internal.
-      SIDECAR_SONARR_URL: http://host.docker.internal:8989
-      SIDECAR_SONARR_API_KEY: <Sonarr Settings > General > API Key>
+      BARNACLARR_SONARR_URL: http://host.docker.internal:8989
+      BARNACLARR_SONARR_API_KEY: <Sonarr Settings > General > API Key>
       # Optional: movies from Radarr too (webhook /webhook/radarr). Remove if unused.
-      SIDECAR_RADARR_URL: http://host.docker.internal:7878
-      SIDECAR_RADARR_API_KEY: <Radarr Settings > General > API Key>
+      BARNACLARR_RADARR_URL: http://host.docker.internal:7878
+      BARNACLARR_RADARR_API_KEY: <Radarr Settings > General > API Key>
       # Random string of 32+ characters, e.g. `openssl rand -hex 32`.
-      SIDECAR_WEBHOOK_TOKEN: <webhook token>
-      SIDECAR_DEFAULT_LANGUAGE: und
+      BARNACLARR_WEBHOOK_TOKEN: <webhook token>
+      BARNACLARR_DEFAULT_LANGUAGE: und
       # Keep true until a dry-run report looks right.
-      SIDECAR_DRY_RUN: "true"
+      BARNACLARR_DRY_RUN: "true"
     ports:
       - "8787:8787"
     extra_hosts:

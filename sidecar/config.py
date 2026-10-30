@@ -1,4 +1,4 @@
-"""Configuration from SIDECAR_* environment variables and an optional TOML file."""
+"""Configuration from BARNACLARR_* environment variables and an optional TOML file."""
 
 from dataclasses import dataclass, field
 import json
@@ -8,7 +8,7 @@ import re
 import tomllib
 
 DEFAULT_CONFIG = Path("/config/config.toml")
-# SIDECAR_<NAME> -> (config field, parser). Environment overrides the TOML file;
+# BARNACLARR_<NAME> -> (config field, parser). Environment overrides the TOML file;
 # rules and mappings are structured and stay in TOML only.
 ENVIRONMENT = {
     "DOWNLOAD_ROOTS": ("download_roots", "paths"),
@@ -87,23 +87,23 @@ class Config:
 
     @classmethod
     def load(cls, path: Path | None = None, environ=os.environ) -> "Config":
-        """Read the TOML file if present, then apply SIDECAR_* variables over it.
+        """Read the TOML file if present, then apply BARNACLARR_* variables over it.
 
-        Without an explicit path, SIDECAR_CONFIG or /config/config.toml is used,
+        Without an explicit path, BARNACLARR_CONFIG or /config/config.toml is used,
         and a missing default file simply means environment-only configuration.
         """
         explicit = path or (
-            Path(environ["SIDECAR_CONFIG"]) if environ.get("SIDECAR_CONFIG") else None
+            Path(environ["BARNACLARR_CONFIG"]) if environ.get("BARNACLARR_CONFIG") else None
         )
         source = explicit or DEFAULT_CONFIG
         data = tomllib.loads(source.read_text()) if explicit or source.exists() else {}
         for name, (key, kind) in ENVIRONMENT.items():
-            value = environ.get("SIDECAR_" + name, "").strip()
+            value = environ.get("BARNACLARR_" + name, "").strip()
             if value:
                 data[key] = _parse(name, value, kind)
         for key in ("download_roots", "library_roots", "font_root"):
             if not data.get(key):
-                raise ValueError(f"{key} is required (SIDECAR_{key.upper()} or config.toml)")
+                raise ValueError(f"{key} is required (BARNACLARR_{key.upper()} or config.toml)")
         for key in ("download_roots", "library_roots"):
             data[key] = [Path(x) for x in data[key]]
         for key in (
@@ -128,10 +128,10 @@ class Config:
                 if source.is_relative_to(dest) or dest.is_relative_to(source):
                     raise ValueError("Download and destination roots must not overlap")
         if not config.sonarr_url and not config.radarr_url:
-            raise ValueError("Set SIDECAR_SONARR_URL and/or SIDECAR_RADARR_URL")
+            raise ValueError("Set BARNACLARR_SONARR_URL and/or BARNACLARR_RADARR_URL")
         for name, url in (("SONARR", config.sonarr_url), ("RADARR", config.radarr_url)):
             if url and not url.startswith(("http://", "https://")):
-                raise ValueError(f"SIDECAR_{name}_URL must be an http(s) address")
+                raise ValueError(f"BARNACLARR_{name}_URL must be an http(s) address")
         if config.api_version not in {"v3", "v5"}:
             raise ValueError("Unsupported Sonarr API version")
         if not isinstance(config.dry_run, bool):
@@ -170,7 +170,7 @@ def _parse(name: str, value: str, kind: str):
             return True
         if value.lower() in {"0", "false", "no", "off"}:
             return False
-        raise ValueError(f"SIDECAR_{name} must be true or false")
+        raise ValueError(f"BARNACLARR_{name} must be true or false")
     if kind == "int":
         return int(value)
     return value

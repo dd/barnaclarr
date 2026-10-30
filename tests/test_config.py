@@ -5,15 +5,15 @@ import pytest
 from sidecar.config import Config
 
 BASE = {
-    "SIDECAR_DOWNLOAD_ROOTS": "/mnt/media/downloads/anime,/mnt/media/downloads/sonarr",
-    "SIDECAR_LIBRARY_ROOTS": "/mnt/media/anime",
-    "SIDECAR_FONT_ROOT": "/mnt/media/.barnaclarr-fonts",
-    "SIDECAR_SONARR_URL": "http://sonarr:8989",
+    "BARNACLARR_DOWNLOAD_ROOTS": "/mnt/media/downloads/anime,/mnt/media/downloads/sonarr",
+    "BARNACLARR_LIBRARY_ROOTS": "/mnt/media/anime",
+    "BARNACLARR_FONT_ROOT": "/mnt/media/.barnaclarr-fonts",
+    "BARNACLARR_SONARR_URL": "http://sonarr:8989",
 }
 
 
 def load(tmp_path, environ, toml=None):
-    environ = {"SIDECAR_CONFIG": "", **environ}
+    environ = {"BARNACLARR_CONFIG": "", **environ}
     path = None
     if toml is not None:
         path = tmp_path / "config.toml"
@@ -26,7 +26,7 @@ def test_environment_only(tmp_path, monkeypatch):
     monkeypatch.setattr("sidecar.config.DEFAULT_CONFIG", tmp_path / "missing.toml")
     config = load(
         tmp_path,
-        {**BASE, "SIDECAR_DRY_RUN": "false", "SIDECAR_DEFAULT_LANGUAGE": "ru"},
+        {**BASE, "BARNACLARR_DRY_RUN": "false", "BARNACLARR_DEFAULT_LANGUAGE": "ru"},
     )
     assert config.download_roots == [
         Path("/mnt/media/downloads/anime"),
@@ -43,7 +43,10 @@ def test_environment_overrides_file_and_keeps_rules(tmp_path):
     """TOML keeps rules/mappings; variables win for scalar settings."""
     config = load(
         tmp_path,
-        {"SIDECAR_SONARR_URL": "http://other:1", "SIDECAR_LIBRARY_ROOTS": '["/mnt/media/a, b"]'},
+        {
+            "BARNACLARR_SONARR_URL": "http://other:1",
+            "BARNACLARR_LIBRARY_ROOTS": '["/mnt/media/a, b"]',
+        },
         toml="""
 download_roots = ["/mnt/media/downloads/anime"]
 library_roots = ["/mnt/media/anime"]
@@ -71,7 +74,7 @@ def test_secrets_from_values_or_files(tmp_path, monkeypatch):
     monkeypatch.setattr("sidecar.config.DEFAULT_CONFIG", tmp_path / "missing.toml")
     direct = load(
         tmp_path,
-        {**BASE, "SIDECAR_SONARR_API_KEY": "s3cr3t-api", "SIDECAR_WEBHOOK_TOKEN": "t" * 32},
+        {**BASE, "BARNACLARR_SONARR_API_KEY": "s3cr3t-api", "BARNACLARR_WEBHOOK_TOKEN": "t" * 32},
     )
     assert (direct.api_key(), direct.token()) == ("s3cr3t-api", "t" * 32)
     assert "s3cr3t-api" not in repr(direct) and "t" * 32 not in repr(direct)
@@ -81,8 +84,8 @@ def test_secrets_from_values_or_files(tmp_path, monkeypatch):
         tmp_path,
         {
             **BASE,
-            "SIDECAR_SONARR_API_KEY_FILE": str(tmp_path / "api"),
-            "SIDECAR_WEBHOOK_TOKEN_FILE": str(tmp_path / "token"),
+            "BARNACLARR_SONARR_API_KEY_FILE": str(tmp_path / "api"),
+            "BARNACLARR_WEBHOOK_TOKEN_FILE": str(tmp_path / "token"),
         },
     )
     assert (files.api_key(), files.token()) == ("file-key", "f" * 32)
@@ -102,11 +105,11 @@ def test_default_file_is_read_when_present(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     "override,message",
     [
-        ({"SIDECAR_LIBRARY_ROOTS": ""}, "library_roots is required"),
-        ({"SIDECAR_SONARR_URL": "sonarr:8989"}, "SIDECAR_SONARR_URL"),
-        ({"SIDECAR_DRY_RUN": "maybe"}, "SIDECAR_DRY_RUN"),
-        ({"SIDECAR_DEFAULT_LANGUAGE": "Russian"}, "default_language"),
-        ({"SIDECAR_LIBRARY_ROOTS": "/mnt/media/downloads/anime/x"}, "must not overlap"),
+        ({"BARNACLARR_LIBRARY_ROOTS": ""}, "library_roots is required"),
+        ({"BARNACLARR_SONARR_URL": "sonarr:8989"}, "BARNACLARR_SONARR_URL"),
+        ({"BARNACLARR_DRY_RUN": "maybe"}, "BARNACLARR_DRY_RUN"),
+        ({"BARNACLARR_DEFAULT_LANGUAGE": "Russian"}, "default_language"),
+        ({"BARNACLARR_LIBRARY_ROOTS": "/mnt/media/downloads/anime/x"}, "must not overlap"),
     ],
 )
 def test_invalid_environment(tmp_path, monkeypatch, override, message):
