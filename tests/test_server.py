@@ -109,10 +109,50 @@ def test_requeue_by_id_failed_and_dry_run(tmp_path):
         state.finish(job, "OSError" if error == "failed" else None, dry_run=dry_run)
     assert state.requeue(failed=True) == [1]
     assert state.requeue(dry_run=True) == [2, 4]
-    assert state.requeue([3, 5]) == [3]  # 5 is still queued
+    assert state.requeue([3, 5]) == [3, 5]  # 5 waits for an attempt, now it runs at once
     assert state.requeue(dry_run=True) == []
     rows = state.db.execute("SELECT status,attempts,dry_run,error FROM jobs").fetchall()
     assert {tuple(row) for row in rows} == {("queued", 0, 0, None)}
+    state.next_job()
+    assert state.requeue([1]) == []  # a running job is left alone
+    state.close()
+
+
+def test_jobs_list_names_app_and_event(tmp_path):
+    from sidecar.__main__ import list_jobs
+
+    state = State(tmp_path / "db")
+    state.enqueue(
+        {"eventType": "Download", "_app": "radarr", "movie": {"title": "Akira", "year": 1988}}
+    )
+    state.enqueue({"eventType": "Rename", "series": {"title": "Pluto"}})
+    assert list_jobs(state) == [
+        {
+            "id": 2,
+            "app": "sonarr",
+            "event": "Rename Pluto",
+            "status": "queued",
+            "attempts": 0,
+            "dry_run": 0,
+            "error": None,
+        },
+        {
+            "id": 1,
+            "app": "radarr",
+            "event": "Download Akira (1988)",
+            "status": "queued",
+            "attempts": 0,
+            "dry_run": 0,
+            "error": None,
+        },
+    ]
+    job = state.next_job()
+    job["attempts"] = 5
+    state.finish(job, "OSError")
+    assert [j["id"] for j in list_jobs(state, statuses=["queued"])] == [2]
+    assert [j["id"] for j in list_jobs(state, statuses=["queued", "failed"])] == [2, 1]
+    assert [j["id"] for j in list_jobs(state, app="radarr")] == [1]
+    assert [j["id"] for j in list_jobs(state, limit=1)] == [2]
     state.close()
 
 

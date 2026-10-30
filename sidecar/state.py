@@ -89,11 +89,14 @@ class State:
         self.db.commit()
 
     def requeue(self, ids=(), failed: bool = False, dry_run: bool = False) -> list[int]:
-        """Queue finished jobs again: chosen ids, all failed, and/or all dry-run ones."""
+        """Run jobs again now: chosen ids, all failed, and/or all dry-run ones.
+
+        A chosen id may also be waiting for its next attempt; only a running job is left alone.
+        """
         found = {
             row["id"]
             for row in self.db.execute(
-                "SELECT id FROM jobs WHERE status IN ('done','failed')"
+                "SELECT id FROM jobs WHERE status IN ('done','failed','queued')"
                 f" AND (id IN ({','.join('?' * len(ids))}) OR (? AND status='failed')"
                 " OR (? AND status='done' AND dry_run))",
                 (*ids, failed, dry_run),

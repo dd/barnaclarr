@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 from .config import Config
-from .engine import Engine, event_app
+from .engine import Engine, event_app, event_subject
 from .server import serve
 from .sonarr import Radarr, Sonarr
 from .state import State
@@ -22,6 +22,28 @@ def installed_version() -> str:
         return version("barnaclarr")
     except PackageNotFoundError:
         return "unknown (not installed)"
+
+
+def list_jobs(state: State, limit: int = 100, statuses=(), app: str | None = None) -> list[dict]:
+    """Latest jobs first, each with its source app and event, as in the logs.
+
+    Optionally only some statuses and/or one app; the limit counts matching jobs.
+    """
+    query = "SELECT id,status,attempts,dry_run,error,payload FROM jobs"
+    if statuses:
+        query += f" WHERE status IN ({','.join('?' * len(statuses))})"
+    jobs = []
+    for row in state.db.execute(query + " ORDER BY id DESC", tuple(statuses)):
+        job = dict(row)
+        payload = json.loads(job.pop("payload"))
+        if app and event_app(payload) != app:
+            continue
+        jobs.append(
+            {"id": job.pop("id"), "app": event_app(payload), "event": event_subject(payload), **job}
+        )
+        if len(jobs) == limit:
+            break
+    return jobs
 
 
 def main():
@@ -39,7 +61,15 @@ def main():
     event.add_argument(
         "--apply", action="store_true", help="Apply only if config dry_run=false too"
     )
-    sub.add_parser("jobs")
+    jobs = sub.add_parser("jobs", help="List the latest jobs")
+    jobs.add_argument(
+        "--status",
+        action="append",
+        choices=["queued", "running", "done", "failed"],
+        help="Only jobs with this status; repeat for several",
+    )
+    jobs.add_argument("--app", choices=["sonarr", "radarr"], help="Only jobs from this app")
+    jobs.add_argument("--limit", type=int, default=100, help="At most this many (default 100)")
     retry = sub.add_parser("retry", help="Queue finished jobs again")
     retry.add_argument("ids", type=int, nargs="*", help="Job ids, failed or done")
     retry.add_argument("--failed", action="store_true", help="All failed jobs")
@@ -79,18 +109,8 @@ def main():
                 report = engine.process(payload, f"[{event_app(payload)}] event")
                 print(json.dumps(report, ensure_ascii=False, indent=2))
             elif args.command == "jobs":
-                print(
-                    json.dumps(
-                        [
-                            dict(row)
-                            for row in state.db.execute(
-                                "SELECT id,status,attempts,dry_run,error FROM jobs"
-                                " ORDER BY id DESC LIMIT 100"
-                            )
-                        ],
-                        indent=2,
-                    )
-                )
+                jobs = list_jobs(state, args.limit, args.status or (), args.app)
+                print(json.dumps(jobs, ensure_ascii=False, indent=2))
             elif args.command == "retry":
                 ids = state.requeue(args.ids, failed=args.failed, dry_run=args.dry_run)
                 print(f"queued {len(ids)} jobs: {' '.join(map(str, ids)) or '-'}")
