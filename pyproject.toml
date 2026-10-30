@@ -3,9 +3,9 @@ requires = ["setuptools>=77,<81"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "anime-sidecar-manager"
+name = "barnaclarr"
 version = "0.1.0"
-description = "Conservative hardlink-only Sonarr sidecar importer"
+description = "Hardlinks extra audio, subtitles and fonts from releases next to Sonarr and Radarr imports"
 requires-python = ">=3.12"
 dependencies = ["fonttools==4.60.1"]
 
@@ -13,7 +13,7 @@ dependencies = ["fonttools==4.60.1"]
 test = ["pytest==8.4.2", "ruff==0.14.1"]
 
 [project.scripts]
-anime-sidecar = "sidecar.__main__:main"
+barnaclarr = "sidecar.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["sidecar*"]

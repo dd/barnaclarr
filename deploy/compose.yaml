@@ -1,8 +1,8 @@
 # Host-specific values come from deploy/.env; see deploy/.env.example.
 services:
-  anime-sidecar:
+  barnaclarr:
     # `up --build` builds this tag locally from the checkout instead of pulling it.
-    image: ghcr.io/dd/sidecarr-extras-import:${IMAGE_TAG:-latest}
+    image: ghcr.io/dd/barnaclarr:${IMAGE_TAG:-latest}
     build:
       context: ..
     user: "${PUID:-568}:${PGID:-568}"

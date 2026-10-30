@@ -10,10 +10,10 @@
 | Host path (пример) | Container path | Access |
 | --- | --- | --- |
 | `MEDIA_PATH`, например `/mnt/tank/media` | `/mnt/media` | RW, один общий bind mount |
-| `STATE_PATH`, например `/mnt/tank/apps/anime-sidecar/state` | `/state` | RW |
-| `CONFIG_PATH` (необязательно), например `/mnt/tank/apps/anime-sidecar/config` | `/config` | RO |
+| `STATE_PATH`, например `/mnt/tank/apps/barnaclarr/state` | `/state` | RW |
+| `CONFIG_PATH` (необязательно), например `/mnt/tank/apps/barnaclarr/config` | `/config` | RO |
 
-`MEDIA_PATH` — dataset, в котором лежат и загрузки, и медиатека. Конфигурацию не помещать внутрь управляемых `ix-apps` datasets других приложений. Отдельный dataset для state и config допустим. `font_root` (по умолчанию `/mnt/media/.anime-sidecar-fonts`) должен оставаться **обычной директорией внутри `MEDIA_PATH`**, не отдельным dataset.
+`MEDIA_PATH` — dataset, в котором лежат и загрузки, и медиатека. Конфигурацию не помещать внутрь управляемых `ix-apps` datasets других приложений. Отдельный dataset для state и config допустим. `font_root` (по умолчанию `/mnt/media/.barnaclarr-fonts`) должен оставаться **обычной директорией внутри `MEDIA_PATH`**, не отдельным dataset.
 
 Через TrueNAS создайте каталог state (и config, если он нужен) с правом записи для UID:GID 568:568; для директорий 0700 или более узкий подходящий ACL. Не менять рекурсивно права существующей медиатеки.
 
@@ -48,7 +48,7 @@
 
 ## Build and Custom App
 
-Образ собирается GitHub Actions ([publish.yml](../.github/workflows/publish.yml)) и публикуется в GitHub Container Registry как `ghcr.io/dd/sidecarr-extras-import`:
+Образ собирается GitHub Actions ([publish.yml](../.github/workflows/publish.yml)) и публикуется в GitHub Container Registry как `ghcr.io/dd/barnaclarr`:
 
 | Тег | Когда обновляется |
 | --- | --- |
@@ -56,11 +56,11 @@
 | `dev`, `main` | каждый push в соответствующую ветку, для тестов |
 | `sha-<commit>` | каждая сборка |
 
-Для постоянной установки указывайте конкретную версию, а не `latest` или `dev`. Если пакет в GHCR приватный, сделайте его публичным (GitHub > Packages > package settings) или добавьте учётные данные реестра в TrueNAS (Apps > Configuration > Manage Container Images / Docker Registries). Версию внутри контейнера показывает `anime-sidecar --version`.
+Для постоянной установки указывайте конкретную версию, а не `latest` или `dev`. Если пакет в GHCR приватный, сделайте его публичным (GitHub > Packages > package settings) или добавьте учётные данные реестра в TrueNAS (Apps > Configuration > Manage Container Images / Docker Registries). Версию внутри контейнера показывает `barnaclarr --version`.
 
-Собрать образ локально без реестра тоже можно: `docker build -t ghcr.io/dd/sidecarr-extras-import:dev .`
+Собрать образ локально без реестра тоже можно: `docker build -t ghcr.io/dd/barnaclarr:dev .`
 
-**Install via YAML.** Apps > Discover Apps > меню > Install via YAML. Имя приложения: `anime-sidecar`. Скопируйте `deploy/truenas-custom-app.yaml`, замените все пути `/mnt/tank/...`, адрес Sonarr и оба секрета своими, при необходимости тег образа, порт и `TZ`, затем вставьте целиком. Install via YAML не читает `.env`, поэтому значения задаются прямо в YAML. Обновление версии — смена тега образа в настройках приложения.
+**Install via YAML.** Apps > Discover Apps > меню > Install via YAML. Имя приложения: `barnaclarr`. Скопируйте `deploy/truenas-custom-app.yaml`, замените все пути `/mnt/tank/...`, адрес Sonarr и оба секрета своими, при необходимости тег образа, порт и `TZ`, затем вставьте целиком. Install via YAML не читает `.env`, поэтому значения задаются прямо в YAML. Обновление версии — смена тега образа в настройках приложения.
 
 **Docker Compose вне TrueNAS:**
 
@@ -105,26 +105,26 @@ docker compose -f deploy/compose.yaml up -d
 }
 ```
 
-`11`, `12345` и путь — placeholders. Сохраните файл как `<CONFIG_PATH>/event.json` (каталог config нужно подключить). Чтобы выполнить CLI, временно остановите только anime-sidecar: CLI event и server используют один lock. Из checkout с Compose-файлом:
+`11`, `12345` и путь — placeholders. Сохраните файл как `<CONFIG_PATH>/event.json` (каталог config нужно подключить). Чтобы выполнить CLI, временно остановите только barnaclarr: CLI event и server используют один lock. Из checkout с Compose-файлом:
 
 ```sh
-sudo docker compose -f deploy/compose.yaml run --rm --no-deps anime-sidecar event /config/event.json
+sudo docker compose -f deploy/compose.yaml run --rm --no-deps barnaclarr event /config/event.json
 ```
 
 CLI `event` всегда dry-run, если не указан `--apply`; `--apply` также не отменяет `SIDECAR_DRY_RUN=true`. В отчёте проверьте sources/destinations, язык/группу, пропуски OVA и конфликты шрифтов. Dry-run не создаёт директории медиатеки, но может создать служебную SQLite и lock.
 
-После проверки конфликтов установить `SIDECAR_DRY_RUN=false`, переразвернуть anime-sidecar и повторно подать событие либо запустить `event /config/event.json --apply`. События, уже завершённые в dry-run, **не выполняются повторно автоматически**. Это предотвращает неожиданный массовый импорт при смене режима.
+После проверки конфликтов установить `SIDECAR_DRY_RUN=false`, переразвернуть barnaclarr и повторно подать событие либо запустить `event /config/event.json --apply`. События, уже завершённые в dry-run, **не выполняются повторно автоматически**. Это предотвращает неожиданный массовый импорт при смене режима.
 
 Проверить `stat` у созданной ссылки и исходника: одинаковые device/inode, link count >= 2. Jellyfin может потребовать Scan Media Library для обнаружения новых внешних дорожек.
 
 
 ## Jellyfin fonts
 
-Если Jellyfin подключает тот же `MEDIA_PATH` (например, как `/media`), общая библиотека шрифтов уже видна ему как `/media/.anime-sidecar-fonts`. Изменение образа Jellyfin не требуется.
+Если Jellyfin подключает тот же `MEDIA_PATH` (например, как `/media`), общая библиотека шрифтов уже видна ему как `/media/.barnaclarr-fonts`. Изменение образа Jellyfin не требуется.
 
 Различаются два механизма:
 
-- **Server-side rendering:** добавить к Jellyfin read-only mount `<MEDIA_PATH>/.anime-sidecar-fonts:/usr/local/share/fonts/anime-sidecar:ro`. Перезапустить Jellyfin и проверить обнаружение конкретной family через `fc-match`/`fc-list`. Наличие файла в media/fonts само по себе не регистрирует его в fontconfig.
+- **Server-side rendering:** добавить к Jellyfin read-only mount `<MEDIA_PATH>/.barnaclarr-fonts:/usr/local/share/fonts/barnaclarr:ro`. Перезапустить Jellyfin и проверить обнаружение конкретной family через `fc-match`/`fc-list`. Наличие файла в media/fonts само по себе не регистрирует его в fontconfig.
 - **Web ASS fallback:** в Jellyfin Playback/Transcoding включить Fallback Fonts и указать каталог. По документации Jellyfin общая загрузка fallback ограничена **20 MB**, все файлы заранее отправляются браузеру. Не направлять fallback на всю растущую общую библиотеку без проверки размера. Лучше создать отдельный небольшой curated-каталог в том же dataset, используя только hardlinks выбранных шрифтов.
 
 `fonts/` рядом с видео хранит оригинальные шрифты релиза, но не гарантирует, что каждый Jellyfin-клиент автоматически их подхватит. Разные версии одной family, клиентские ограничения и порядок приоритета шрифтов требуют проверки конкретного воспроизведения. Приложение не меняет внутренние family и не перекодирует шрифты.
@@ -132,16 +132,16 @@ CLI `event` всегда dry-run, если не указан `--apply`; `--apply
 
 ## Operations and upgrades
 
-В UI TrueNAS смотрите логи anime-sidecar. Имя контейнера можно получить через `docker ps`. Изнутри установленного контейнера:
+В UI TrueNAS смотрите логи barnaclarr. Имя контейнера можно получить через `docker ps`. Изнутри установленного контейнера:
 
 ```sh
-anime-sidecar jobs
-anime-sidecar retry 123
+barnaclarr jobs
+barnaclarr retry 123
 ```
 
 `jobs` показывает последние 100 событий и ошибки. `retry` возвращает failed job в очередь. Для полного dry-run отчёта повторите соответствующий payload через `event`. Payload не содержит API key/token, но содержит имена файлов и хранится без автоматического удаления; планируйте резервное копирование и размер state.
 
-Перед обновлением остановить anime-sidecar, сохранить config и **всю директорию state**, включая SQLite WAL/SHM, если они остались. Обновить образ, запустить сначала с dry-run. Используются Docker bind mounts, общедоступный REST API Sonarr и собственное постоянное хранилище, а не внутренние БД сервисов или `.ix-apps`.
+Перед обновлением остановить barnaclarr, сохранить config и **всю директорию state**, включая SQLite WAL/SHM, если они остались. Обновить образ, запустить сначала с dry-run. Используются Docker bind mounts, общедоступный REST API Sonarr и собственное постоянное хранилище, а не внутренние БД сервисов или `.ix-apps`.
 
 Ошибки `EXDEV` означают неверные datasets/mounts; `EACCES` — права/ACL. Исправлять конфигурацией, не включать fallback на копирование и не выдавать контейнеру privileged/root.
 

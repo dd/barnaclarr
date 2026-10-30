@@ -7,8 +7,8 @@
 #   .../state          SQLite queue/journal (read-write, keep across upgrades)
 #   .../config         optional: config.toml with rules and mappings only
 services:
-  anime-sidecar:
-    image: ghcr.io/dd/sidecarr-extras-import:0.1.0
+  barnaclarr:
+    image: ghcr.io/dd/barnaclarr:0.1.0
     user: "568:568"
     restart: unless-stopped
     read_only: true
@@ -22,7 +22,7 @@ services:
       # Paths as seen inside the container (the media dataset is /mnt/media).
       SIDECAR_DOWNLOAD_ROOTS: /mnt/media/downloads/anime
       SIDECAR_LIBRARY_ROOTS: /mnt/media/anime
-      SIDECAR_FONT_ROOT: /mnt/media/.anime-sidecar-fonts
+      SIDECAR_FONT_ROOT: /mnt/media/.barnaclarr-fonts
       # Sonarr as reachable from this container: NAS LAN IP or host.docker.internal.
       SIDECAR_SONARR_URL: http://host.docker.internal:8989
       SIDECAR_SONARR_API_KEY: <Sonarr Settings > General > API Key>
@@ -40,9 +40,9 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - /mnt/tank/media:/mnt/media
-      - /mnt/tank/apps/anime-sidecar/state:/state
+      - /mnt/tank/apps/barnaclarr/state:/state
       # Optional, for rules and mappings: a directory with config.toml.
-      # - /mnt/tank/apps/anime-sidecar/config:/config:ro
+      # - /mnt/tank/apps/barnaclarr/config:/config:ro
     tmpfs:
       - /tmp:size=16m,mode=1777
     logging:

@@ -1,6 +1,6 @@
 # Руководство пользователя
 
-Пошаговая инструкция: что делает Anime Sidecar Manager, как поставить его в TrueNAS, подключить к Sonarr и проверить. Справочные подробности — в [installation.md](installation.md), требования к дискам — в [storage.md](storage.md).
+Пошаговая инструкция: что делает Barnaclarr, как поставить его в TrueNAS, подключить к Sonarr и проверить. Справочные подробности — в [installation.md](installation.md), требования к дискам — в [storage.md](storage.md).
 
 
 ## Что делает модуль
@@ -46,7 +46,7 @@ Cells at Work! (2018)/Season 01/
     └── ...
 ```
 
-В Jellyfin в меню аудио появятся «AniLibria — Russian» и «StudioBand — Russian», в субтитрах — «laci», «laci Signs» и так далее (язык здесь взят из `SIDECAR_DEFAULT_LANGUAGE`, потому что в папках раздачи он не указан). Шрифты дополнительно попадают в общую папку `.anime-sidecar-fonts`, которую можно подключить к Jellyfin.
+В Jellyfin в меню аудио появятся «AniLibria — Russian» и «StudioBand — Russian», в субтитрах — «laci», «laci Signs» и так далее (язык здесь взят из `SIDECAR_DEFAULT_LANGUAGE`, потому что в папках раздачи он не указан). Шрифты дополнительно попадают в общую папку `.barnaclarr-fonts`, которую можно подключить к Jellyfin.
 
 Модуль ничего не скачивает, не переименовывает видео и не меняет файлы раздачи.
 
@@ -61,16 +61,16 @@ Cells at Work! (2018)/Season 01/
 
 ## Быстрый старт в TrueNAS
 
-Ниже `/mnt/tank/media` — твой dataset с загрузками и медиатекой, `/mnt/tank/apps/anime-sidecar` — место для служебных файлов модуля. Подставь свои пути.
+Ниже `/mnt/tank/media` — твой dataset с загрузками и медиатекой, `/mnt/tank/apps/barnaclarr` — место для служебных файлов модуля. Подставь свои пути.
 
 ### 1. Папка для служебной базы
 
 Модуль хранит очередь событий и журнал созданных ссылок в SQLite. В shell TrueNAS:
 
 ```sh
-sudo mkdir -p /mnt/tank/apps/anime-sidecar/state
-sudo chown -R 568:568 /mnt/tank/apps/anime-sidecar
-sudo chmod 700 /mnt/tank/apps/anime-sidecar/state
+sudo mkdir -p /mnt/tank/apps/barnaclarr/state
+sudo chown -R 568:568 /mnt/tank/apps/barnaclarr
+sudo chmod 700 /mnt/tank/apps/barnaclarr/state
 ```
 
 ### 2. Токен для вебхука
@@ -85,12 +85,12 @@ openssl rand -hex 32
 
 ### 3. Установка
 
-Apps → Discover Apps → ⋮ → **Install via YAML**. Имя приложения: `anime-sidecar`. Возьми [deploy/truenas-custom-app.yaml](../deploy/truenas-custom-app.yaml) и замени в нём:
+Apps → Discover Apps → ⋮ → **Install via YAML**. Имя приложения: `barnaclarr`. Возьми [deploy/truenas-custom-app.yaml](../deploy/truenas-custom-app.yaml) и замени в нём:
 
 | Что | Пример | Пояснение |
 | --- | --- | --- |
 | `/mnt/tank/media` в `volumes` | `/mnt/tank/media` | твой dataset, внутри контейнера он будет `/mnt/media` |
-| `/mnt/tank/apps/anime-sidecar/state` | | папка из шага 1 |
+| `/mnt/tank/apps/barnaclarr/state` | | папка из шага 1 |
 | `SIDECAR_DOWNLOAD_ROOTS` | `/mnt/media/downloads/anime` | папки категорий торрент-клиента, через запятую; путь внутри контейнера |
 | `SIDECAR_LIBRARY_ROOTS` | `/mnt/media/anime` | корневые папки сериалов в Sonarr, через запятую |
 | `SIDECAR_SONARR_URL` | `http://host.docker.internal:8989` | порт, на котором приложение Sonarr опубликовано в TrueNAS (8989 у Sonarr по умолчанию); если не подключается — LAN IP NAS |
@@ -120,7 +120,7 @@ curl -s http://localhost:8787/health
 
 Sonarr → Settings → Connect → + → **Webhook**:
 
-- **Name:** `anime-sidecar`
+- **Name:** `barnaclarr`
 - **Triggers:** On File Import, On File Upgrade, On Rename. On Import Complete не включай: те же события пришли бы дважды.
 - **Tags:** для первой проверки — тег одного сериала. Потом тег можно убрать.
 - **Webhook URL:** `http://<IP NAS>:8787/webhook/sonarr`. Адрес должен быть доступен из контейнера Sonarr; обычно подходит LAN IP NAS или адрес шлюза Docker-сети, через который Sonarr ходит к торрент-клиенту.
@@ -167,7 +167,7 @@ srt, ass, ssa, sub, idx, mka, mp3, ac3, flac, m4a, aac
 
 Импортируй в тестовый сериал новую серию — дождись автоматической загрузки или сделай ручной импорт (см. [сценарии](#раздача-которую-sonarr-не-нашёл-сам)).
 
-В логах приложения (Apps → anime-sidecar → Logs) для каждого события Sonarr появится строка о постановке в очередь, а после обработки — итог, раздача, видео и список дорожек с указанием, откуда каждая взята:
+В логах приложения (Apps → barnaclarr → Logs) для каждого события Sonarr появится строка о постановке в очередь, а после обработки — итог, раздача, видео и список дорожек с указанием, откуда каждая взята:
 
 ```
 [sonarr] job=12 queued: Download Black Lagoon S01E01
@@ -199,19 +199,19 @@ srt, ass, ssa, sub, idx, mka, mp3, ac3, flac, m4a, aac
 Список последних задач:
 
 ```sh
-sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep sidecar) anime-sidecar jobs
+sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barnaclarr jobs
 ```
 
 У задачи должен быть `"status": "done"`.
 
 ### 2. Включение записи
 
-Если план выглядит правильно: Apps → anime-sidecar → Edit, поставь `SIDECAR_DRY_RUN: "false"` и сохрани.
+Если план выглядит правильно: Apps → barnaclarr → Edit, поставь `SIDECAR_DRY_RUN: "false"` и сохрани.
 
 События, которые прошли в dry-run, сами не повторяются. Чтобы применить их, верни выполненные задачи в очередь:
 
 ```sh
-sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep sidecar) python -c "import sqlite3; db = sqlite3.connect('/state/sidecar.sqlite3'); print(db.execute(\"UPDATE jobs SET status='queued', attempts=0, next_attempt=0 WHERE status='done'\").rowcount, 'requeued'); db.commit()"
+sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) python -c "import sqlite3; db = sqlite3.connect('/state/sidecar.sqlite3'); print(db.execute(\"UPDATE jobs SET status='queued', attempts=0, next_attempt=0 WHERE status='done'\").rowcount, 'requeued'); db.commit()"
 ```
 
 Это безопасно: модуль не создаёт дубликаты и не трогает чужие файлы.
@@ -316,7 +316,7 @@ language = "ja"
 
 ### Шрифты в Jellyfin
 
-Модуль собирает шрифты в `.anime-sidecar-fonts`, но Jellyfin сам их не использует. Как подключить — в разделе [Jellyfin fonts](installation.md#jellyfin-fonts). Учти лимит 20 МБ для fallback-шрифтов в веб-клиенте: шрифты одной раздачи бывают больше.
+Модуль собирает шрифты в `.barnaclarr-fonts`, но Jellyfin сам их не использует. Как подключить — в разделе [Jellyfin fonts](installation.md#jellyfin-fonts). Учти лимит 20 МБ для fallback-шрифтов в веб-клиенте: шрифты одной раздачи бывают больше.
 
 
 ## Частые проблемы
@@ -330,7 +330,7 @@ language = "ja"
 **`PermissionError` / `Permission denied`.** Файлы и папки модуля должны принадлежать UID 568. Если секреты или `config.toml` лежат в файлах, исправь владельца изнутри root-shell, чтобы раскрылась маска:
 
 ```sh
-sudo sh -c 'chown 568:568 /mnt/tank/apps/anime-sidecar/config/*'
+sudo sh -c 'chown 568:568 /mnt/tank/apps/barnaclarr/config/*'
 ```
 
 **Дорожки не появились, в логе `"dry_run": true`.** Включён тестовый режим, см. [Включение записи](#2-включение-записи).
@@ -349,7 +349,7 @@ sudo sh -c 'chown 568:568 /mnt/tank/apps/anime-sidecar/config/*'
 После исправления верни задачу в очередь:
 
 ```sh
-sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep sidecar) anime-sidecar retry <id>
+sudo docker exec $(sudo docker ps --format '{{.Names}}' | grep barnaclarr) barnaclarr retry <id>
 ```
 
 **Уведомления в отчёте:**

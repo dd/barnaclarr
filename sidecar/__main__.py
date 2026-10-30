@@ -19,13 +19,13 @@ from .state import State
 def installed_version() -> str:
     """Version from pyproject.toml, as installed into the image by pip."""
     try:
-        return version("anime-sidecar-manager")
+        return version("barnaclarr")
     except PackageNotFoundError:
         return "unknown (not installed)"
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Anime Sidecar Manager")
+    parser = argparse.ArgumentParser(description="Barnaclarr")
     parser.add_argument(
         "--config",
         type=Path,

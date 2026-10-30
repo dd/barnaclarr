@@ -6,7 +6,7 @@
 # Every setting can also live here instead, e.g. for plain Docker without variables:
 # download_roots = ["/mnt/media/downloads/anime"]     # SIDECAR_DOWNLOAD_ROOTS
 # library_roots = ["/mnt/media/anime"]                # SIDECAR_LIBRARY_ROOTS
-# font_root = "/mnt/media/.anime-sidecar-fonts"       # SIDECAR_FONT_ROOT
+# font_root = "/mnt/media/.barnaclarr-fonts"          # SIDECAR_FONT_ROOT
 # database = "/state/sidecar.sqlite3"                 # SIDECAR_DATABASE
 # sonarr_url = "http://host.docker.internal:8989"     # SIDECAR_SONARR_URL
 # api_key_file = "/config/sonarr-api-key"             # SIDECAR_SONARR_API_KEY(_FILE)

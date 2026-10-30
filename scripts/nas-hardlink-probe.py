@@ -22,7 +22,7 @@ def main():
     try:
         for parent in [args.media, args.other]:
             code = (
-                'import tempfile; print(tempfile.mkdtemp(prefix=".anime-sidecar-probe-",dir='
+                'import tempfile; print(tempfile.mkdtemp(prefix=".barnaclarr-probe-",dir='
                 + repr(str(parent))
                 + "))"
             )

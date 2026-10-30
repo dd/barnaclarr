@@ -7,7 +7,7 @@ from sidecar.config import Config
 BASE = {
     "SIDECAR_DOWNLOAD_ROOTS": "/mnt/media/downloads/anime,/mnt/media/downloads/sonarr",
     "SIDECAR_LIBRARY_ROOTS": "/mnt/media/anime",
-    "SIDECAR_FONT_ROOT": "/mnt/media/.anime-sidecar-fonts",
+    "SIDECAR_FONT_ROOT": "/mnt/media/.barnaclarr-fonts",
     "SIDECAR_SONARR_URL": "http://sonarr:8989",
 }
 

@@ -23,7 +23,7 @@
 
 ## Checking your NAS
 
-[`scripts/nas-hardlink-probe.py`](../scripts/nas-hardlink-probe.py) проверяет эти сценарии на вашем хранилище. Он создаёт только временные каталоги `.anime-sidecar-probe-*` и удаляет их после проверки, запускает одноразовый контейнер из уже существующего образа (по умолчанию Sonarr) с `--network=none`, без capabilities, и ничего не скачивает.
+[`scripts/nas-hardlink-probe.py`](../scripts/nas-hardlink-probe.py) проверяет эти сценарии на вашем хранилище. Он создаёт только временные каталоги `.barnaclarr-probe-*` и удаляет их после проверки, запускает одноразовый контейнер из уже существующего образа (по умолчанию Sonarr) с `--network=none`, без capabilities, и ничего не скачивает.
 
 ```sh
 sudo python3 scripts/nas-hardlink-probe.py --media /mnt/<pool>/<media-dataset> --other /mnt/<pool>/<other-dataset>

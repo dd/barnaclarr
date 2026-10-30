@@ -219,7 +219,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Anime Sidecar Manager local configuration and state
+# Barnaclarr local configuration and state
 config.toml
 sonarr-api-key
 webhook-token
