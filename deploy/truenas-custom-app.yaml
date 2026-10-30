@@ -1,0 +1,52 @@
+# TrueNAS SCALE: Apps > Discover Apps > menu > Install via YAML.
+# Install via YAML has no .env file: replace every /mnt/tank/... path, the Sonarr
+# address and both secrets below before pasting. Settings are read at start; edit
+# the app and redeploy to change them.
+#
+#   /mnt/tank/media    dataset holding BOTH downloads and the library (one mount)
+#   .../state          SQLite queue/journal (read-write, keep across upgrades)
+#   .../config         optional: config.toml with rules and mappings only
+services:
+  barnaclarr:
+    image: ghcr.io/dd/barnaclarr:0.1.0
+    user: "568:568"
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 512m
+    cpus: 1
+    environment:
+      TZ: UTC
+      # Paths as seen inside the container (the media dataset is /mnt/media).
+      BARNACLARR_DOWNLOAD_ROOTS: /mnt/media/downloads/anime
+      BARNACLARR_LIBRARY_ROOTS: /mnt/media/anime
+      BARNACLARR_FONT_ROOT: /mnt/media/.barnaclarr-fonts
+      # Sonarr as reachable from this container: NAS LAN IP or host.docker.internal.
+      BARNACLARR_SONARR_URL: http://host.docker.internal:8989
+      BARNACLARR_SONARR_API_KEY: <Sonarr Settings > General > API Key>
+      # Optional: movies from Radarr too (webhook /webhook/radarr). Remove if unused.
+      BARNACLARR_RADARR_URL: http://host.docker.internal:7878
+      BARNACLARR_RADARR_API_KEY: <Radarr Settings > General > API Key>
+      # Random string of 32+ characters, e.g. `openssl rand -hex 32`.
+      BARNACLARR_WEBHOOK_TOKEN: <webhook token>
+      BARNACLARR_DEFAULT_LANGUAGE: und
+      # Keep true until a dry-run report looks right.
+      BARNACLARR_DRY_RUN: "true"
+    ports:
+      - "8787:8787"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /mnt/tank/media:/mnt/media
+      - /mnt/tank/apps/barnaclarr/state:/state
+      # Optional, for rules and mappings: a directory with config.toml.
+      # - /mnt/tank/apps/barnaclarr/config:/config:ro
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

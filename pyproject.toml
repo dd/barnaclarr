@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "barnaclarr"
+version = "0.1.0"
+description = "Hardlinks extra audio, subtitles and fonts from releases next to Sonarr and Radarr imports"
+requires-python = ">=3.12"
+dependencies = ["fonttools==4.60.1"]
+
+[project.optional-dependencies]
+test = ["pytest==8.4.2", "ruff==0.14.1"]
+
+[project.scripts]
+barnaclarr = "sidecar.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["sidecar*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100

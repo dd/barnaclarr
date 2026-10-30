@@ -1,0 +1,41 @@
+# Optional config file: <config dir>/config.toml, mounted at /config/config.toml.
+# Normal settings come from BARNACLARR_* environment variables (see truenas-custom-app.yaml);
+# a variable always wins over the same key here. This file is needed only for rules
+# and mappings, which are too structured for environment variables.
+#
+# Every setting can also live here instead, e.g. for plain Docker without variables:
+# download_roots = ["/mnt/media/downloads/anime"]     # BARNACLARR_DOWNLOAD_ROOTS
+# library_roots = ["/mnt/media/anime"]                # BARNACLARR_LIBRARY_ROOTS
+# font_root = "/mnt/media/.barnaclarr-fonts"          # BARNACLARR_FONT_ROOT
+# database = "/state/sidecar.sqlite3"                 # BARNACLARR_DATABASE
+# sonarr_url = "http://host.docker.internal:8989"     # BARNACLARR_SONARR_URL
+# api_key_file = "/config/sonarr-api-key"             # BARNACLARR_SONARR_API_KEY(_FILE)
+# radarr_url = "http://host.docker.internal:7878"     # BARNACLARR_RADARR_URL
+# radarr_api_key_file = "/config/radarr-api-key"      # BARNACLARR_RADARR_API_KEY(_FILE)
+# webhook_token_file = "/config/webhook-token"        # BARNACLARR_WEBHOOK_TOKEN(_FILE)
+# api_version = "v3"                                  # BARNACLARR_API_VERSION
+# dry_run = true                                      # BARNACLARR_DRY_RUN
+# port = 8787                                         # BARNACLARR_PORT
+# max_files = 20000                                   # BARNACLARR_MAX_FILES
+# default_language = "und"                            # BARNACLARR_DEFAULT_LANGUAGE
+
+# Rules match the release-relative path; later rules override earlier ones.
+# Language and group are normally taken from the folder names ("ENG Subs/Commie",
+# "Sounds/AniLibria [rus]"); rules are for releases where that is not enough.
+
+# A folder name that would otherwise produce an awkward group name.
+[[rules]]
+pattern = '(?i)funi(mation)?'
+language = "en"
+group = "Funimation"
+
+# A folder without a language label that holds a known language.
+[[rules]]
+pattern = '(?i)Audio 5\.1'
+language = "ja"
+
+# Exact category-relative sidecar paths -> Sonarr episode IDs (or a Radarr movie ID),
+# not episode numbers.
+# Never assume release "13 OVA" equals S00E13. Verify in Sonarr first.
+[mappings]
+# "Release/Subs/Show - 13 OVA.ass" = [1234]

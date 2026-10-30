@@ -1,0 +1,45 @@
+# Host-specific values come from deploy/.env; see deploy/.env.example.
+services:
+  barnaclarr:
+    # `up --build` builds this tag locally from the checkout instead of pulling it.
+    image: ghcr.io/dd/barnaclarr:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+    user: "${PUID:-568}:${PGID:-568}"
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 512m
+    cpus: 1
+    environment:
+      TZ: ${TZ:-UTC}
+      # Empty values are ignored, so config.toml can still provide them.
+      BARNACLARR_DOWNLOAD_ROOTS: ${BARNACLARR_DOWNLOAD_ROOTS:-}
+      BARNACLARR_LIBRARY_ROOTS: ${BARNACLARR_LIBRARY_ROOTS:-}
+      BARNACLARR_FONT_ROOT: ${BARNACLARR_FONT_ROOT:-}
+      BARNACLARR_SONARR_URL: ${BARNACLARR_SONARR_URL:-}
+      BARNACLARR_SONARR_API_KEY: ${BARNACLARR_SONARR_API_KEY:-}
+      BARNACLARR_RADARR_URL: ${BARNACLARR_RADARR_URL:-}
+      BARNACLARR_RADARR_API_KEY: ${BARNACLARR_RADARR_API_KEY:-}
+      BARNACLARR_WEBHOOK_TOKEN: ${BARNACLARR_WEBHOOK_TOKEN:-}
+      BARNACLARR_DEFAULT_LANGUAGE: ${BARNACLARR_DEFAULT_LANGUAGE:-}
+      BARNACLARR_DRY_RUN: ${BARNACLARR_DRY_RUN:-}
+    ports:
+      - "${WEBHOOK_PORT:-8787}:8787"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # One mount, not separate mounts for downloads and library.
+      - ${MEDIA_PATH:?set MEDIA_PATH in deploy/.env}:/mnt/media
+      - ${STATE_PATH:?set STATE_PATH in deploy/.env}:/state
+      # Optional config.toml for rules and mappings; an empty directory is fine.
+      - ${CONFIG_PATH:?set CONFIG_PATH in deploy/.env}:/config:ro
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
